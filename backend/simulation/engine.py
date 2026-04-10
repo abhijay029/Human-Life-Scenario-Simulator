@@ -37,26 +37,12 @@ def _rate_limited_invoke(prompt):
     return llm.invoke(prompt)
 
 def safe_llm_invoke(prompt, retries=2):
-    """Try Gemini first, fall back to HuggingFace if quota is exhausted."""
     for i in range(retries):
         try:
             return _rate_limited_invoke(prompt)
         except Exception as e:
-            error_str = str(e).lower()
-            if any(k in error_str for k in ["quota", "429", "resource_exhausted", "rate limit"]):
-                print("[Gemini] Quota hit — switching to HuggingFace fallback...")
-                from backend.agents.hf_llm import hf_invoke
-
-                class _HFResponse:
-                    def __init__(self, text):
-                        self.content = text
-
-                reply = hf_invoke(prompt, max_new_tokens=150)
-                return _HFResponse(reply)
-
             print(f"[Retry {i+1}] LLM error: {e}")
             time.sleep(20 * (i + 1))
-
     raise RuntimeError("LLM failed after retries")
 
 # ── State ─────────────────────────────────────────────────────────────────────
