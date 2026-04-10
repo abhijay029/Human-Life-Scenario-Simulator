@@ -1,91 +1,99 @@
 import os
+import time
 from dotenv import load_dotenv
-from typing import TypedDict, Annotated
+from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from backend.agents.persona import Persona
 from backend.memory.memory_manager import PersonaMemory
-import time
 
 load_dotenv(".env")
 
-model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 llm = ChatGoogleGenerativeAI(
     model=model_name,
     google_api_key=os.getenv("GEMINI_API_KEY"),
-    timeout=300,
-    max_retries=3,
+    timeout=60,
+    max_retries=2,
     temperature=0.7,
-    max_output_tokens=256   # IMPORTANT
+    max_output_tokens=150      # tight cap — enough for natural dialogue
 )
-# ── State that flows through the graph ──────────────────────────────────────
+
+# Minimum seconds between any two LLM calls globally
+# 5 RPM = 1 request per 12s minimum. We use 13s to be safe.
+_INTER_REQUEST_DELAY = 15
+_last_request_time = 0.0
+
+def _rate_limited_invoke(prompt):
+    global _last_request_time
+    now = time.time()
+    wait = _INTER_REQUEST_DELAY - (now - _last_request_time)
+    if wait > 0:
+        print(f"[RateLimit] Waiting {wait:.1f}s...")
+        time.sleep(wait)
+    _last_request_time = time.time()
+    return llm.invoke(prompt)
+
+def safe_llm_invoke(prompt, retries=2):
+    for i in range(retries):
+        try:
+            return _rate_limited_invoke(prompt)
+        except Exception as e:
+            print(f"[Retry {i+1}] LLM error: {e}")
+            time.sleep(20 * (i + 1))
+    raise RuntimeError("LLM failed after retries")
+
+# ── State ─────────────────────────────────────────────────────────────────────
 class SimulationState(TypedDict):
     scenario: str
-    personas: list[dict]          # serialised Persona dicts
-    dialogue_log: list[dict]      # {"speaker": name, "message": text}
+    personas: list[dict]
+    dialogue_log: list[dict]
     current_turn: int
     max_turns: int
-    decision_point: str           # the user's injected decision
+    decision_point: str
     active_speaker_index: int
 
-# ── Helper: build prompt for one agent turn ──────────────────────────────────
+# ── Prompt builder — lean and token-efficient ─────────────────────────────────
 def build_agent_prompt(persona: Persona, memory: PersonaMemory,
                        dialogue_log: list[dict], scenario: str,
                        decision_point: str) -> list:
-    # Recall relevant memories for this moment
-    recall_query = f"{scenario} {decision_point} {dialogue_log[-1]['message'] if dialogue_log else ''}"
-    memories = memory.recall(recall_query, n_results=2)
-    memory_context = "\n".join(
-        f"- {m[:150]}"   # limit memory length
-        for m in memories
-    )
 
-    system = SystemMessage(content=f"""
-{persona.to_system_prompt()}
+    # Only recall 1 memory to save tokens
+    recall_query = f"{decision_point} {dialogue_log[-1]['message'][:80] if dialogue_log else ''}"
+    memories = memory.recall(recall_query, n_results=1)
+    memory_context = memories[0][:120] if memories else "None"
 
-RELEVANT MEMORIES ABOUT YOURSELF:
-{memory_context}
+    # Compact system prompt — same info, fewer tokens
+    system = SystemMessage(content=(
+        f"You are {persona.name}, {persona.age}yo {persona.occupation}.\n"
+        f"Traits: {', '.join(persona.personality_traits[:3])}.\n"
+        f"Values: {', '.join(persona.values[:2])}.\n"
+        f"Triggered by: {', '.join(persona.emotional_triggers[:2])}.\n"
+        f"Memory: {memory_context}\n"
+        f"Situation: {scenario[:200]}\n"
+        f"Decision: {decision_point[:150]}\n"
+        f"Stay in character. Reply in 2-3 sentences max. Natural dialogue only."
+    ))
 
-SCENARIO: {scenario}
-DECISION POINT: {decision_point}
-""")
-
-    # Build conversation history
+    # Only last 2 turns of history to save tokens
     history = []
-    for entry in dialogue_log[-4:]:   # last 6 turns for context window efficiency
+    for entry in dialogue_log[-2:]:
         if entry["speaker"] == persona.name:
             history.append(AIMessage(content=entry["message"]))
         else:
-            history.append(HumanMessage(content=f"{entry['speaker']}: {entry['message']}"))
+            history.append(HumanMessage(content=f"{entry['speaker']}: {entry['message'][:150]}"))
 
     if not history:
-        history.append(HumanMessage(content=f"The situation begins. {scenario}. {decision_point}"))
+        history.append(HumanMessage(content=f"The situation begins. Respond in character."))
 
     return [system] + history
 
-def safe_llm_invoke(prompt, retries=3):
-    for i in range(retries):
-        try:
-            return llm.invoke(prompt)
-
-        except Exception as e:
-            print(f"[Retry {i+1}] LLM error:", e)
-
-            wait_time = 15 * (i + 1)
-            print(f"[Waiting {wait_time}s before retry]")
-
-            time.sleep(wait_time)
-
-    raise RuntimeError("LLM failed after retries")
-
-# ── Node: one persona speaks ─────────────────────────────────────────────────
+# ── Agent turn node ───────────────────────────────────────────────────────────
 def agent_turn(state: SimulationState) -> SimulationState:
-    personas_data = state["personas"]
     idx = state["active_speaker_index"]
-    persona_dict = personas_data[idx]
-    persona = Persona(**persona_dict)
+    persona = Persona(**state["personas"][idx])
     memory = PersonaMemory(persona.name)
 
     prompt = build_agent_prompt(
@@ -96,22 +104,30 @@ def agent_turn(state: SimulationState) -> SimulationState:
     )
 
     total_chars = sum(len(msg.content) for msg in prompt)
-    print(f"[DEBUG] Prompt size: {total_chars} chars")
-    
-    response = safe_llm_invoke(prompt)
-    reply = response.content.strip()
+    print(f"[Turn {state['current_turn']+1}] {persona.name} | ~{total_chars} chars")
 
-    # Store this exchange as a new memory for the persona
-    if state["dialogue_log"]:
+    response = safe_llm_invoke(prompt)
+
+    # Handle both string and list content
+    content = response.content
+    if isinstance(content, list):
+        reply = " ".join(
+            block.get("text", "") if isinstance(block, dict) else str(block)
+            for block in content
+        ).strip()
+    else:
+        reply = content.strip()
+
+    # Store exchange as memory (skip embedding call if turn > 2 to save quota)
+    if state["dialogue_log"] and state["current_turn"] <= 2:
         last = state["dialogue_log"][-1]
         memory.store_memories_batch(
-            [f"During simulation, {last['speaker']} said: '{last['message']}'. "
-             f"{persona.name} responded: '{reply[:120]}'"],
+            [f"{last['speaker']}: '{last['message'][:80]}' → {persona.name}: '{reply[:80]}'"],
             id_prefix=f"{persona.name}_turn_{state['current_turn']}"
         )
 
     updated_log = state["dialogue_log"] + [{"speaker": persona.name, "message": reply}]
-    next_speaker = (idx + 1) % len(personas_data)
+    next_speaker = (idx + 1) % len(state["personas"])
 
     return {
         **state,
@@ -120,27 +136,20 @@ def agent_turn(state: SimulationState) -> SimulationState:
         "active_speaker_index": next_speaker
     }
 
-# ── Edge condition: keep going or end ────────────────────────────────────────
+# ── Graph ─────────────────────────────────────────────────────────────────────
 def should_continue(state: SimulationState) -> str:
-    if state["current_turn"] >= state["max_turns"]:
-        return "end"
-    return "continue"
+    return "end" if state["current_turn"] >= state["max_turns"] else "continue"
 
-# ── Build the LangGraph ───────────────────────────────────────────────────────
 def build_simulation_graph():
     graph = StateGraph(SimulationState)
     graph.add_node("agent_turn", agent_turn)
     graph.set_entry_point("agent_turn")
-    graph.add_conditional_edges(
-        "agent_turn",
-        should_continue,
-        {"continue": "agent_turn", "end": END}
-    )
+    graph.add_conditional_edges("agent_turn", should_continue,
+                                {"continue": "agent_turn", "end": END})
     return graph.compile()
 
-# ── Public entry point ────────────────────────────────────────────────────────
 def run_simulation(personas: list[Persona], scenario: str,
-                   decision_point: str, max_turns: int = 6) -> list[dict]:
+                   decision_point: str, max_turns: int = 4) -> list[dict]:
     graph = build_simulation_graph()
     initial_state: SimulationState = {
         "scenario": scenario,

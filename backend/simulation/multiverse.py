@@ -62,27 +62,23 @@ def run_multiverse(
     max_workers: int = 3,
 ) -> list[dict]:
     """
-    Run each decision branch concurrently and return all results ranked by
-    average persona goal success probability (descending).
+    Run each decision branch sequentially (safe for free-tier rate limits
+    and local ChromaDB), then return results ranked by average persona
+    goal success probability (descending).
     """
-    args_list = [
-        (personas, scenario, branch, max_turns)
-        for branch in decision_branches
-    ]
-
     results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = {pool.submit(_run_branch, args): args for args in args_list}
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                results.append(future.result())
-            except Exception as exc:  # pragma: no cover
-                branch = futures[future][2]
-                results.append({
-                    "decision_point": branch,
-                    "dialogue_log": [],
-                    "analysis": {"error": str(exc)},
-                })
+    for branch in decision_branches:
+        print(f"\n[Multiverse] Running branch: {branch[:60]}...")
+        try:
+            result = _run_branch((personas, scenario, branch, max_turns))
+            results.append(result)
+        except Exception as exc:
+            print(f"[Multiverse] Branch failed: {exc}")
+            results.append({
+                "decision_point": branch,
+                "dialogue_log": [],
+                "analysis": {"error": str(exc)},
+            })
 
     # Sort: best average goal-success first
     def _avg_success(r: dict) -> float:

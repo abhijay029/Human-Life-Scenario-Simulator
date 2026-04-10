@@ -1,116 +1,153 @@
-"""
-Observer Agent
-==============
-Analyses a completed dialogue log and returns structured outcome metrics:
-  - per-turn sentiment  (positive / neutral / negative + score −1→+1)
-  - overall relationship trajectory
-  - success probability for each persona's goals
-  - outcome category: Best Case / Most Likely / Worst Case
-  - a brief narrative summary of what happened and why
-"""
-
 import os
 import json
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
+def _observer_invoke(messages):
+    import time
+    time.sleep(20)  # always pause before Observer call
+    return _llm.invoke(messages)
+
 load_dotenv()
 
 _llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
+    max_output_tokens=1200,
 )
 
-OBSERVER_SYSTEM_PROMPT = """You are an expert psychologist and conflict-analysis AI called the Observer Agent.
-Your job is to read a simulated dialogue between personas and produce a structured JSON report.
+OBSERVER_SYSTEM_PROMPT = """You are a psychology analyst AI. Analyse the dialogue and return ONLY valid JSON. No markdown, no explanation, just the raw JSON object.
 
-You must return ONLY valid JSON — no markdown, no explanation outside the JSON.
-
-The JSON schema is:
+Return this exact structure:
 {
-  "turn_sentiments": [
-    {
-      "turn": <int, 1-based>,
-      "speaker": "<name>",
-      "sentiment": "positive" | "neutral" | "negative",
-      "score": <float, -1.0 to 1.0>,
-      "note": "<one-sentence reason>"
-    }
-  ],
-  "relationship_trajectory": "improving" | "stable" | "deteriorating",
-  "trajectory_explanation": "<2 sentences>",
-  "persona_goal_success": [
-    {
-      "persona": "<name>",
-      "goal_summary": "<their goals condensed>",
-      "success_probability": <float, 0.0 to 1.0>,
-      "reasoning": "<2 sentences>"
-    }
-  ],
-  "outcome_category": "Best Case" | "Most Likely" | "Worst Case",
-  "outcome_summary": "<3–5 sentence narrative of what happened, why, and what the likely real-world result is>",
-  "key_turning_points": ["<moment 1>", "<moment 2>"],
-  "recommendations": ["<actionable advice 1>", "<actionable advice 2>", "<actionable advice 3>"]
+  "turn_sentiments": [{"turn": 1, "speaker": "name", "sentiment": "positive", "score": 0.5, "note": "reason"}],
+  "relationship_trajectory": "improving",
+  "trajectory_explanation": "one sentence",
+  "persona_goal_success": [{"persona": "name", "goal_summary": "brief", "success_probability": 0.6, "reasoning": "one sentence"}],
+  "outcome_category": "Most Likely",
+  "outcome_summary": "two sentences max",
+  "key_turning_points": ["point 1"],
+  "recommendations": ["advice 1", "advice 2"]
 }
-"""
 
+Rules:
+- sentiment must be exactly: positive, neutral, or negative
+- relationship_trajectory must be exactly: improving, stable, or deteriorating  
+- outcome_category must be exactly: Best Case, Most Likely, or Worst Case
+- Keep all strings SHORT — max 20 words each
+- Return the complete JSON in one response"""
 
-def analyse_dialogue(
-    dialogue_log: list[dict],
-    scenario: str,
-    decision_point: str,
-    personas: list[dict],
-) -> dict:
-    """
-    Runs the Observer Agent over a completed dialogue log.
+import time
 
-    Parameters
-    ----------
-    dialogue_log   : list of {"speaker": str, "message": str}
-    scenario       : the scenario description string
-    decision_point : the injected decision string
-    personas       : list of serialised Persona dicts (for goal context)
+def analyse_dialogue(dialogue_log, scenario, decision_point, personas) -> dict:
+    if not dialogue_log:
+        return {}
 
-    Returns
-    -------
-    dict matching the schema above
-    """
-    persona_goals = "\n".join(
-        f"- {p['name']}: {', '.join(p.get('goals', []))}"
-        for p in personas
+    # Extra pause before Observer call — it always follows simulation turns closely
+    print("[Observer] Pausing 20s before analysis to respect rate limits...")
+    time.sleep(20)
+
+    persona_goals = "; ".join(
+        f"{p['name']}: {', '.join(p.get('goals', []))}" for p in personas
     )
-
     dialogue_text = "\n".join(
-        f"[Turn {i+1}] {entry['speaker']}: {entry['message']}"
-        for i, entry in enumerate(dialogue_log)
+        f"[{i+1}] {e['speaker']}: {e['message'][:200]}"
+        for i, e in enumerate(dialogue_log)
     )
 
-    user_content = f"""SCENARIO: {scenario}
-
-DECISION POINT: {decision_point}
-
-PERSONA GOALS:
-{persona_goals}
-
-DIALOGUE LOG:
-{dialogue_text}
-
-Please analyse the above and return your JSON report now."""
+    user_content = (
+        f"Scenario: {scenario[:200]}\n"
+        f"Decision: {decision_point[:150]}\n"
+        f"Goals: {persona_goals[:300]}\n"
+        f"Dialogue:\n{dialogue_text}\n\nReturn JSON now."
+    )
 
     messages = [
         SystemMessage(content=OBSERVER_SYSTEM_PROMPT),
         HumanMessage(content=user_content),
     ]
 
-    response = _llm.invoke(messages)
-    raw = response.content.strip()
+    response = _observer_invoke(messages)
 
-    # Strip markdown fences if the model wrapped it anyway
+    content = response.content
+    if isinstance(content, list):
+        raw = " ".join(
+            block.get("text", "") if isinstance(block, dict) else str(block)
+            for block in content
+        ).strip()
+    else:
+        raw = content.strip()
+
+    print(f"[Observer RAW RESPONSE]\n{raw}\n[END RAW]")
+
+    # Strip markdown fences
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
         raw = raw.strip()
 
-    return json.loads(raw)
+    # Extract JSON object robustly
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        print(f"[Observer] Could not find JSON in response. Raw: {raw[:200]}")
+        return _fallback_analysis(dialogue_log, personas)
+
+    raw = raw[start:end]
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        print(f"[Observer] JSON parse error: {e}. Attempting repair...")
+        return _repair_and_parse(raw, dialogue_log, personas)
+
+
+def _repair_and_parse(raw: str, dialogue_log: list, personas: list) -> dict:
+    """Try to salvage a broken JSON response."""
+    import re
+
+    # Fix common issues: trailing commas before } or ]
+    raw = re.sub(r",\s*}", "}", raw)
+    raw = re.sub(r",\s*]", "]", raw)
+
+    # Fix unquoted property names
+    raw = re.sub(r'(?<!["\w])(\w+)(?=\s*:)', r'"\1"', raw)
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        print("[Observer] Repair failed — returning fallback analysis.")
+        return _fallback_analysis(dialogue_log, personas)
+
+
+def _fallback_analysis(dialogue_log: list, personas: list) -> dict:
+    """Return a minimal valid analysis when parsing completely fails."""
+    return {
+        "turn_sentiments": [
+            {
+                "turn": i + 1,
+                "speaker": e["speaker"],
+                "sentiment": "neutral",
+                "score": 0.0,
+                "note": "Auto-fallback — observer parsing failed."
+            }
+            for i, e in enumerate(dialogue_log)
+        ],
+        "relationship_trajectory": "stable",
+        "trajectory_explanation": "Observer analysis unavailable for this branch.",
+        "persona_goal_success": [
+            {
+                "persona": p["name"],
+                "goal_summary": ", ".join(p.get("goals", [])),
+                "success_probability": 0.5,
+                "reasoning": "Default fallback value."
+            }
+            for p in personas
+        ],
+        "outcome_category": "Most Likely",
+        "outcome_summary": "Simulation completed but observer analysis could not be parsed.",
+        "key_turning_points": [],
+        "recommendations": []
+    }
