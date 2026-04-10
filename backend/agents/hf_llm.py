@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-HF_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+HF_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+HF_API_URL = f"https://huggingface.co/api/models./{HF_MODEL}"
 _HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 _HF_INTER_REQUEST_DELAY = 3
