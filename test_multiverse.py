@@ -71,8 +71,8 @@ scenario = (
 
 decision_branches = [
     "Arjun is fully honest: he reveals he already has a music production deal worth ₹3 lakh.",
-    # "Arjun is evasive: he says he 'just wants to explore options' without committing to anything.",
-    # "Arjun brings a mediator: he asks his mother to be present and starts the conversation gently.",
+    "Arjun is evasive: he says he 'just wants to explore options' without committing to anything.",
+    "Arjun brings a mediator: he asks his mother to be present and starts the conversation gently.",
 ]
 
 # ── Run Multiverse ────────────────────────────────────────────────────────────
