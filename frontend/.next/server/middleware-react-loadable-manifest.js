@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"components\\\\ResultsView.tsx -> ./DecisionTree\":{\"id\":\"components\\\\ResultsView.tsx -> ./DecisionTree\",\"files\":[\"static/css/_app-pages-browser_src_components_DecisionTree_tsx.css\",\"static/chunks/_app-pages-browser_src_components_DecisionTree_tsx.js\"]}}"
