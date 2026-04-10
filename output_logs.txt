@@ -1,0 +1,126 @@
+1.test_multiverse.py:
+
+Loading persona memories...
+  Rahul Sharma memories already cached (8 facts)
+  Arjun Sharma memories already cached (8 facts)
+
+Running multiverse with 1 branches...
+
+============================================================
+
+[Multiverse] Running branch: Arjun is fully honest: he reveals he already has a music pro...
+[Turn 1] Rahul Sharma | ~636 chars
+[Turn 2] Arjun Sharma | ~671 chars
+[RateLimit] Waiting 8.2s...
+[Memory] Stored 1 memories for Arjun Sharma in one batch.
+[Turn 3] Rahul Sharma | ~636 chars
+[RateLimit] Waiting 9.6s...
+[Memory] Stored 1 memories for Rahul Sharma in one batch.
+[Observer] Pausing 20s before analysis to respect rate limits...
+[Observer RAW RESPONSE]
+```json
+{
+  "turn_sentiments": [
+    {
+      "turn": 1,
+      "speaker": "Rahul Sharma",
+      "sentiment": "negative",
+      "score": 0.9,
+      "note": "Expresses shock and disapproval, indicating a perceived abandonment."
+    },
+    {
+      "turn": 2,
+      "speaker": "Arjun Sharma",
+      "sentiment": "neutral",
+      "score": 0.5,
+      "note": "Attempts to interject and explain, but is cut off, showing defensiveness."
+    },
+    {
+      "turn": 3,
+      "speaker": "Rahul Sharma",
+      "sentiment": "negative",
+      "score": 0.9,
+      "note": "Repeats disbelief and interrupts, showing unwillingness to listen."
+    }
+  ],
+  "relationship_trajectory": "deteriorating",
+  "trajectory_explanation": "Rahul's immediate, strong disapproval and interruption of Arjun indicate a breakdown in constructive communication.",
+  "persona_goal_success": [
+    {
+      "persona": "Rahul Sharma",
+      "goal_summary": "Ensure safe career, maintain harmony on his terms.",
+      "success_probability": 0.1,
+      "reasoning": "Arjun's decision directly opposes Rahul's idea of a safe career, and Rahul's reaction creates disharmony."
+    },
+    {
+      "persona": "Arjun Sharma",
+      "goal_summary": "Convince father, avoid major conflict.",
+      "success_probability": 0.1,
+      "reasoning": "Rahul's immediate negative reaction and interruptions indicate conflict is already escalating, hindering support."
+    }
+  ],
+  "outcome_category": "Most Likely",
+  "outcome_summary": "The conversation is likely to escalate into a significant argument, with Rahul unwilling to consider Arjun's perspective. Arjun will struggle to present his case fully.",
+  "key_turning_points": [
+    "Rahul's initial, strong negative reaction and accusation.",
+    "Rahul's repeated interruption of Arjun, preventing explanation."
+  ],
+  "recommendations": [
+    "Arjun should calmly state he has important information and needs to speak without interruption.",
+    "Rahul needs to consciously pause and allow Arjun to present his full case, including the deal."
+  ]
+}
+```
+[END RAW]
+
+============================================================
+BRANCH 1: Arjun is fully honest: he reveals he already has a music production deal worth ₹3 lakh.
+============================================================
+
+DIALOGUE:
+  [Rahul Sharma]: You want to abandon...
+  [Arjun Sharma]: Papa, it's...
+  [Rahul Sharma]: You want to...
+
+OUTCOME CATEGORY : Most Likely
+TRAJECTORY       : deteriorating
+OUTCOME SUMMARY  : The conversation is likely to escalate into a significant argument, with Rahul unwilling to consider Arjun's perspective. Arjun will struggle to present his case fully.
+
+GOAL SUCCESS PROBABILITIES:
+  Rahul Sharma: 10%
+  Arjun Sharma: 10%
+
+RECOMMENDATIONS:
+  • Arjun should calmly state he has important information and needs to speak without interruption.
+  • Rahul needs to consciously pause and allow Arjun to present his full case, including the deal.
+
+============================================================
+FINAL COMPARISON REPORT
+============================================================
+{
+  "best_case": {
+    "decision_point": "Arjun is fully honest: he reveals he already has a music production deal worth \u20b93 lakh.",
+    "outcome_category": "Most Likely",
+    "outcome_summary": "The conversation is likely to escalate into a significant argument, with Rahul unwilling to consider Arjun's perspective. Arjun will struggle to present his case fully.",
+    "avg_success_probability": 0.1
+  },
+  "worst_case": {
+    "decision_point": "Arjun is fully honest: he reveals he already has a music production deal worth \u20b93 lakh.",
+    "outcome_category": "Most Likely",
+    "outcome_summary": "The conversation is likely to escalate into a significant argument, with Rahul unwilling to consider Arjun's perspective. Arjun will struggle to present his case fully.",
+    "avg_success_probability": 0.1
+  },
+  "most_likely": {
+    "decision_point": "Arjun is fully honest: he reveals he already has a music production deal worth \u20b93 lakh.",
+    "outcome_category": "Most Likely",
+    "outcome_summary": "The conversation is likely to escalate into a significant argument, with Rahul unwilling to consider Arjun's perspective. Arjun will struggle to present his case fully.",
+    "avg_success_probability": 0.1
+  },
+  "all_branches_ranked": [
+    {
+      "decision_point": "Arjun is fully honest: he reveals he already has a music production deal worth \u20b93 lakh.",
+      "outcome_category": "Most Likely",
+      "avg_success_probability": 0.1
+    }
+  ]
+}

@@ -6,8 +6,23 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 def _observer_invoke(messages):
     import time
-    time.sleep(20)  # always pause before Observer call
-    return _llm.invoke(messages)
+    print("[Observer] Pausing 20s before analysis to respect rate limits...")
+    time.sleep(20)
+    try:
+        return _llm.invoke(messages)
+    except Exception as e:
+        error_str = str(e).lower()
+        if any(k in error_str for k in ["quota", "429", "resource_exhausted", "rate limit"]):
+            print("[Observer] Gemini quota hit — using HuggingFace for analysis...")
+            from backend.agents.hf_llm import hf_invoke
+
+            class _HFResponse:
+                def __init__(self, text):
+                    self.content = text
+
+            reply = hf_invoke(messages, max_new_tokens=600)
+            return _HFResponse(reply)
+        raise
 
 load_dotenv()
 
