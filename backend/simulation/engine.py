@@ -10,7 +10,7 @@ from backend.memory.memory_manager import PersonaMemory
 
 load_dotenv(".env")
 
-model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
 
 llm = ChatGoogleGenerativeAI(
     model=model_name,
@@ -36,14 +36,30 @@ def _rate_limited_invoke(prompt):
     _last_request_time = time.time()
     return llm.invoke(prompt)
 
-def safe_llm_invoke(prompt, retries=2):
+def safe_llm_invoke(prompt, retries=5):
+    """Retry Gemini with exponential backoff on any error."""
     for i in range(retries):
         try:
             return _rate_limited_invoke(prompt)
         except Exception as e:
-            print(f"[Retry {i+1}] LLM error: {e}")
-            time.sleep(20 * (i + 1))
-    raise RuntimeError("LLM failed after retries")
+            error_str = str(e).lower()
+            
+            if "503" in error_str or "unavailable" in error_str:
+                wait = 30 * (i + 1)   # 30s, 60s, 90s, 120s, 150s
+                print(f"[Gemini 503] Service unavailable. Waiting {wait}s before retry {i+1}/{retries}...")
+                time.sleep(wait)
+
+            elif any(k in error_str for k in ["quota", "429", "resource_exhausted", "rate limit"]):
+                wait = 60 * (i + 1)   # quota needs longer wait
+                print(f"[Gemini 429] Quota hit. Waiting {wait}s before retry {i+1}/{retries}...")
+                time.sleep(wait)
+
+            else:
+                wait = 20 * (i + 1)
+                print(f"[Retry {i+1}/{retries}] LLM error: {e} — waiting {wait}s")
+                time.sleep(wait)
+
+    raise RuntimeError("Gemini failed after all retries. Try again in a few minutes.")
 
 # ── State ─────────────────────────────────────────────────────────────────────
 class SimulationState(TypedDict):
