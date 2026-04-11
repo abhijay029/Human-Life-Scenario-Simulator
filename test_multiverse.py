@@ -1,6 +1,5 @@
 """
 test_multiverse.py
-==================
 Tests the full Multiverse pipeline:
   - Three decision branches for the same scenario
   - Observer Agent analysis per branch
