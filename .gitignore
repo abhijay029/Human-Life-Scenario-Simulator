@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 .env
 venv/
 __pycache__/
 chroma_store/
 frontend/node_modules/
 frontend/next-env.d.ts
+=======
+.env
+venv/
+__pycache__/
+chroma_store/
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df

@@ -10,7 +10,11 @@ from backend.memory.memory_manager import PersonaMemory
 
 load_dotenv(".env")
 
+<<<<<<< HEAD
 model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+=======
+model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 
 llm = ChatGoogleGenerativeAI(
     model=model_name,
@@ -36,12 +40,17 @@ def _rate_limited_invoke(prompt):
     _last_request_time = time.time()
     return llm.invoke(prompt)
 
+<<<<<<< HEAD
 def safe_llm_invoke(prompt, retries=5):
     """Retry Gemini with exponential backoff on any error."""
+=======
+def safe_llm_invoke(prompt, retries=2):
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     for i in range(retries):
         try:
             return _rate_limited_invoke(prompt)
         except Exception as e:
+<<<<<<< HEAD
             error_str = str(e).lower()
             
             if "503" in error_str or "unavailable" in error_str:
@@ -60,6 +69,11 @@ def safe_llm_invoke(prompt, retries=5):
                 time.sleep(wait)
 
     raise RuntimeError("Gemini failed after all retries. Try again in a few minutes.")
+=======
+            print(f"[Retry {i+1}] LLM error: {e}")
+            time.sleep(20 * (i + 1))
+    raise RuntimeError("LLM failed after retries")
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 
 # ── State ─────────────────────────────────────────────────────────────────────
 class SimulationState(TypedDict):
@@ -104,9 +118,12 @@ def build_agent_prompt(persona: Persona, memory: PersonaMemory,
     if not history:
         history.append(HumanMessage(content=f"The situation begins. Respond in character."))
 
+<<<<<<< HEAD
     if isinstance(history[-1], AIMessage):
         history.append(HumanMessage(content="Continue the conversation. Respond in character."))
 
+=======
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     return [system] + history
 
 # ── Agent turn node ───────────────────────────────────────────────────────────

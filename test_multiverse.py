@@ -1,5 +1,9 @@
 """
 test_multiverse.py
+<<<<<<< HEAD
+=======
+==================
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 Tests the full Multiverse pipeline:
   - Three decision branches for the same scenario
   - Observer Agent analysis per branch
@@ -70,8 +74,13 @@ scenario = (
 
 decision_branches = [
     "Arjun is fully honest: he reveals he already has a music production deal worth ₹3 lakh.",
+<<<<<<< HEAD
     # "Arjun is evasive: he says he 'just wants to explore options' without committing to anything.",
     # "Arjun brings a mediator: he asks his mother to be present and starts the conversation gently.",
+=======
+    "Arjun is evasive: he says he 'just wants to explore options' without committing to anything.",
+    "Arjun brings a mediator: he asks his mother to be present and starts the conversation gently.",
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 ]
 
 # ── Run Multiverse ────────────────────────────────────────────────────────────

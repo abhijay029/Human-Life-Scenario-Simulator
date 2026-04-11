@@ -1,15 +1,30 @@
 import os
 import json
+<<<<<<< HEAD
 import time
 import re
+=======
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
+<<<<<<< HEAD
 load_dotenv()
 
 _llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite"),
+=======
+def _observer_invoke(messages):
+    import time
+    time.sleep(20)  # always pause before Observer call
+    return _llm.invoke(messages)
+
+load_dotenv()
+
+_llm = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     google_api_key=os.getenv("GEMINI_API_KEY"),
     max_output_tokens=1200,
 )
@@ -30,11 +45,16 @@ Return this exact structure:
 
 Rules:
 - sentiment must be exactly: positive, neutral, or negative
+<<<<<<< HEAD
 - relationship_trajectory must be exactly: improving, stable, or deteriorating
+=======
+- relationship_trajectory must be exactly: improving, stable, or deteriorating  
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 - outcome_category must be exactly: Best Case, Most Likely, or Worst Case
 - Keep all strings SHORT — max 20 words each
 - Return the complete JSON in one response"""
 
+<<<<<<< HEAD
 
 def _observer_invoke(messages):
     import time
@@ -62,11 +82,21 @@ def _observer_invoke(messages):
 
     raise RuntimeError("Observer failed after all retries.")
 
+=======
+import time
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
 
 def analyse_dialogue(dialogue_log, scenario, decision_point, personas) -> dict:
     if not dialogue_log:
         return {}
 
+<<<<<<< HEAD
+=======
+    # Extra pause before Observer call — it always follows simulation turns closely
+    print("[Observer] Pausing 20s before analysis to respect rate limits...")
+    time.sleep(20)
+
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     persona_goals = "; ".join(
         f"{p['name']}: {', '.join(p.get('goals', []))}" for p in personas
     )
@@ -100,16 +130,28 @@ def analyse_dialogue(dialogue_log, scenario, decision_point, personas) -> dict:
 
     print(f"[Observer RAW RESPONSE]\n{raw}\n[END RAW]")
 
+<<<<<<< HEAD
+=======
+    # Strip markdown fences
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
         raw = raw.strip()
 
+<<<<<<< HEAD
     start = raw.find("{")
     end = raw.rfind("}") + 1
     if start == -1 or end == 0:
         print(f"[Observer] Could not find JSON. Raw: {raw[:200]}")
+=======
+    # Extract JSON object robustly
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        print(f"[Observer] Could not find JSON in response. Raw: {raw[:200]}")
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
         return _fallback_analysis(dialogue_log, personas)
 
     raw = raw[start:end]
@@ -122,8 +164,21 @@ def analyse_dialogue(dialogue_log, scenario, decision_point, personas) -> dict:
 
 
 def _repair_and_parse(raw: str, dialogue_log: list, personas: list) -> dict:
+<<<<<<< HEAD
     raw = re.sub(r",\s*}", "}", raw)
     raw = re.sub(r",\s*]", "]", raw)
+=======
+    """Try to salvage a broken JSON response."""
+    import re
+
+    # Fix common issues: trailing commas before } or ]
+    raw = re.sub(r",\s*}", "}", raw)
+    raw = re.sub(r",\s*]", "]", raw)
+
+    # Fix unquoted property names
+    raw = re.sub(r'(?<!["\w])(\w+)(?=\s*:)', r'"\1"', raw)
+
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
@@ -132,7 +187,11 @@ def _repair_and_parse(raw: str, dialogue_log: list, personas: list) -> dict:
 
 
 def _fallback_analysis(dialogue_log: list, personas: list) -> dict:
+<<<<<<< HEAD
     """Return a minimal valid analysis when JSON parsing completely fails."""
+=======
+    """Return a minimal valid analysis when parsing completely fails."""
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
     return {
         "turn_sentiments": [
             {
@@ -140,18 +199,30 @@ def _fallback_analysis(dialogue_log: list, personas: list) -> dict:
                 "speaker": e["speaker"],
                 "sentiment": "neutral",
                 "score": 0.0,
+<<<<<<< HEAD
                 "note": "Observer parsing failed — neutral assigned."
+=======
+                "note": "Auto-fallback — observer parsing failed."
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
             }
             for i, e in enumerate(dialogue_log)
         ],
         "relationship_trajectory": "stable",
+<<<<<<< HEAD
         "trajectory_explanation": "Observer analysis could not be parsed for this branch.",
+=======
+        "trajectory_explanation": "Observer analysis unavailable for this branch.",
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
         "persona_goal_success": [
             {
                 "persona": p["name"],
                 "goal_summary": ", ".join(p.get("goals", [])),
                 "success_probability": 0.5,
+<<<<<<< HEAD
                 "reasoning": "Default value — observer parsing failed."
+=======
+                "reasoning": "Default fallback value."
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
             }
             for p in personas
         ],
@@ -159,4 +230,8 @@ def _fallback_analysis(dialogue_log: list, personas: list) -> dict:
         "outcome_summary": "Simulation completed but observer analysis could not be parsed.",
         "key_turning_points": [],
         "recommendations": []
+<<<<<<< HEAD
     }
+=======
+    }
+>>>>>>> 8c6c095954759458197faed706f7478cb7d9f0df
