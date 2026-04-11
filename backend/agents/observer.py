@@ -9,9 +9,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 load_dotenv()
 
 _llm = ChatGoogleGenerativeAI(
-    model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite"),
+    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
-    max_output_tokens=1200,
+    max_output_tokens=5000,
 )
 
 OBSERVER_SYSTEM_PROMPT = """You are a psychology analyst AI. Analyse the dialogue and return ONLY valid JSON. No markdown, no explanation, just the raw JSON object.
@@ -32,7 +32,10 @@ Rules:
 - sentiment must be exactly: positive, neutral, or negative
 - relationship_trajectory must be exactly: improving, stable, or deteriorating
 - outcome_category must be exactly: Best Case, Most Likely, or Worst Case
-- Keep all strings SHORT — max 20 words each
+- Keep ALL strings under 12 words. Be extremely concise.
+- turn_sentiments: max 2 per speaker, combine if needed
+- key_turning_points: max 2 items
+- recommendations: max 2 items
 - Return the complete JSON in one response"""
 
 

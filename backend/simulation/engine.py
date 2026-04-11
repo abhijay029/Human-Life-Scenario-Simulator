@@ -10,7 +10,7 @@ from backend.memory.memory_manager import PersonaMemory
 
 load_dotenv(".env")
 
-model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 llm = ChatGoogleGenerativeAI(
     model=model_name,
@@ -18,7 +18,7 @@ llm = ChatGoogleGenerativeAI(
     timeout=60,
     max_retries=2,
     temperature=0.7,
-    max_output_tokens=150      # tight cap — enough for natural dialogue
+    max_output_tokens=600    # tight cap — enough for natural dialogue
 )
 
 # Minimum seconds between any two LLM calls globally
@@ -90,7 +90,7 @@ def build_agent_prompt(persona: Persona, memory: PersonaMemory,
         f"Memory: {memory_context}\n"
         f"Situation: {scenario[:200]}\n"
         f"Decision: {decision_point[:150]}\n"
-        f"Stay in character. Reply in 2-3 sentences max. Natural dialogue only."
+        f"Stay in character. Speak OUT LOUD only — real spoken words, no actions, no stage directions, no text in brackets or parentheses. Reply in 2-3 complete sentences."
     ))
 
     # Only last 2 turns of history to save tokens
