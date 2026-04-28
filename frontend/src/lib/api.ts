@@ -5,10 +5,11 @@ import type {
   BuildPersonaResponse,
 } from './types'
 
-const BASE = '/api'
+// Call FastAPI directly — bypasses Next.js proxy timeout issues
+const BASE = 'http://localhost:8000'
 
-// 8 minutes — enough for multiverse with Observer pauses
-const TIMEOUT_MS = 8 * 60 * 1000
+// 15 minutes — enough for multiverse with retries and Observer pauses
+const TIMEOUT_MS = 15 * 60 * 1000
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const controller = new AbortController()
@@ -28,7 +29,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     return res.json() as Promise<T>
   } catch (e: unknown) {
     if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Request timed out. The simulation is taking too long — try fewer turns.')
+      throw new Error('Request timed out after 15 minutes.')
     }
     throw e
   } finally {

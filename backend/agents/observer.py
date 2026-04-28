@@ -9,9 +9,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 load_dotenv()
 
 _llm = ChatGoogleGenerativeAI(
-    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"),
+    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
-    max_output_tokens=1200,
+    max_output_tokens=5000,
 )
 
 OBSERVER_SYSTEM_PROMPT = """You are a psychology analyst AI. Analyse the dialogue and return ONLY valid JSON. No markdown, no explanation, just the raw JSON object.
@@ -32,14 +32,38 @@ Rules:
 - sentiment must be exactly: positive, neutral, or negative
 - relationship_trajectory must be exactly: improving, stable, or deteriorating
 - outcome_category must be exactly: Best Case, Most Likely, or Worst Case
-- Keep all strings SHORT — max 20 words each
+- Keep ALL strings under 12 words. Be extremely concise.
+- turn_sentiments: max 2 per speaker, combine if needed
+- key_turning_points: max 2 items
+- recommendations: max 2 items
 - Return the complete JSON in one response"""
 
 
 def _observer_invoke(messages):
-    print("[Observer] Pausing 5s before analysis...")
-    time.sleep(5)
-    return _llm.invoke(messages)
+    import time
+    print("[Observer] Pausing 20s before analysis to respect rate limits...")
+    time.sleep(20)
+
+    for i in range(4):
+        try:
+            return _llm.invoke(messages)
+        except Exception as e:
+            error_str = str(e).lower()
+
+            if "503" in error_str or "unavailable" in error_str:
+                wait = 30 * (i + 1)
+                print(f"[Observer 503] Unavailable. Waiting {wait}s before retry {i+1}/4...")
+                time.sleep(wait)
+
+            elif any(k in error_str for k in ["quota", "429", "resource_exhausted"]):
+                wait = 60 * (i + 1)
+                print(f"[Observer 429] Quota hit. Waiting {wait}s before retry {i+1}/4...")
+                time.sleep(wait)
+
+            else:
+                raise
+
+    raise RuntimeError("Observer failed after all retries.")
 
 
 def analyse_dialogue(dialogue_log, scenario, decision_point, personas) -> dict:

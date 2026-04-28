@@ -1,3 +1,7 @@
+uvicorn main:app --reload --port 8000 --timeout-keep-alive 600
+
+
+
 1.test_multiverse.py:
 
 Loading persona memories...
