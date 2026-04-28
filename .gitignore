@@ -4,3 +4,4 @@ __pycache__/
 chroma_store/
 frontend/node_modules/
 frontend/next-env.d.ts
+frontend/.next
