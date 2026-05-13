@@ -1,7 +1,10 @@
 .env
-venv/
+.venv/
 __pycache__/
 chroma_store/
 frontend/node_modules/
 frontend/next-env.d.ts
 frontend/.next
+test_model.ipynb
+testing.py
+notebooks/
