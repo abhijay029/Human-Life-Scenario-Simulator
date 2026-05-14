@@ -7,59 +7,16 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from backend.agents.persona import Persona
 from backend.memory.memory_manager import PersonaMemory
+from backend.core import llm
 
-load_dotenv(".env")
+_llm = llm.get_engine() 
 
-model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-
-llm = ChatGoogleGenerativeAI(
-    model=model_name,
-    google_api_key=os.getenv("GEMINI_API_KEY"),
-    timeout=60,
-    max_retries=2,
-    temperature=0.7,
-    max_output_tokens=600    # tight cap — enough for natural dialogue
-)
-
-# Minimum seconds between any two LLM calls globally
-# 5 RPM = 1 request per 12s minimum. We use 13s to be safe.
-_INTER_REQUEST_DELAY = 15
-_last_request_time = 0.0
-
-def _rate_limited_invoke(prompt):
-    global _last_request_time
-    now = time.time()
-    wait = _INTER_REQUEST_DELAY - (now - _last_request_time)
-    if wait > 0:
-        print(f"[RateLimit] Waiting {wait:.1f}s...")
-        time.sleep(wait)
-    _last_request_time = time.time()
-    return llm.invoke(prompt)
-
-def safe_llm_invoke(prompt, retries=5):
-    """Retry Gemini with exponential backoff on any error."""
-    for i in range(retries):
-        try:
-            return _rate_limited_invoke(prompt)
-        except Exception as e:
-            error_str = str(e).lower()
-            
-            if "503" in error_str or "unavailable" in error_str:
-                wait = 30 * (i + 1)   # 30s, 60s, 90s, 120s, 150s
-                print(f"[Gemini 503] Service unavailable. Waiting {wait}s before retry {i+1}/{retries}...")
-                time.sleep(wait)
-
-            elif any(k in error_str for k in ["quota", "429", "resource_exhausted", "rate limit"]):
-                wait = 60 * (i + 1)   # quota needs longer wait
-                print(f"[Gemini 429] Quota hit. Waiting {wait}s before retry {i+1}/{retries}...")
-                time.sleep(wait)
-
-            else:
-                wait = 20 * (i + 1)
-                print(f"[Retry {i+1}/{retries}] LLM error: {e} — waiting {wait}s")
-                time.sleep(wait)
-
-    raise RuntimeError("Gemini failed after all retries. Try again in a few minutes.")
+def safe_llm_invoke(prompt):
+    try:
+        return _llm.invoke(prompt)
+    except Exception as e:
+        error_str = str(e).lower()
+        print(f"[Engine: {_llm.model}] Exception: \n{error_str}\n")
 
 # ── State ─────────────────────────────────────────────────────────────────────
 class SimulationState(TypedDict):
