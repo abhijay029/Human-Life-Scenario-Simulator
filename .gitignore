@@ -8,3 +8,7 @@ frontend/.next
 test_model.ipynb
 testing.py
 notebooks/
+test_metric_at_k.py
+system_score.json
+test_scenario_log.json
+system_scores/

@@ -3,6 +3,8 @@ import os
 import threading
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
+import re
+import unicodedata
 
 load_dotenv()
 
@@ -19,7 +21,22 @@ def get_chroma_client():
 class PersonaMemory:
     def __init__(self, persona_name: str):
         self.persona_name = persona_name
-        self.collection_name = f"persona_{persona_name.lower().replace(' ', '_')}"
+
+        # Normalise unicode → decompose accents, then encode to ASCII dropping
+        # anything that doesn't map (handles curly apostrophes, em-dashes, etc.)
+        sanitised = unicodedata.normalize("NFKD", persona_name)
+        sanitised = sanitised.encode("ascii", errors="ignore").decode("ascii")
+
+        sanitised = sanitised.lower()
+        sanitised = sanitised.replace(" ", "_")
+        # Strip everything ChromaDB won't accept: only [a-zA-Z0-9._-] allowed
+        sanitised = re.sub(r"[^a-zA-Z0-9._\-]", "", sanitised)
+        # ChromaDB requires start and end to be [a-zA-Z0-9]
+        sanitised = sanitised.strip("._-")
+        # Fallback if name collapsed to fewer than 3 chars
+        if len(sanitised) < 3:
+            sanitised = f"p_{abs(hash(persona_name)) % 10**8}"
+        self.collection_name = f"persona_{sanitised}"
 
         with _chroma_lock:
             self.client = get_chroma_client()
@@ -47,12 +64,19 @@ class PersonaMemory:
 
     def recall(self, query: str, n_results: int = 2) -> list[str]:
         """Retrieve the most relevant memories for a given situation."""
+        with _chroma_lock:
+            count = self.collection.count()
+        
+        if count == 0:
+            return []   # nothing indexed yet — skip the query entirely
         query_vector = self.embeddings.embed_query(query)
+        
         with _chroma_lock:
             results = self.collection.query(
                 query_embeddings=[query_vector],
-                n_results=n_results
+                n_results=min(n_results, count)  # can't request more results than documents
             )
+        
         return results["documents"][0] if results["documents"] else []
 
     def store_persona_facts(self, persona):
