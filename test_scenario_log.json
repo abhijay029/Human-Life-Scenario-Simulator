@@ -1,0 +1,327 @@
+[
+  {
+    "scenario_index": 1,
+    "scenario_description": "A 35-year-old single mother and her 28-year-old estranged brother reunite after a decade of silence when she shows up at his doorstep with their ailing grandmother, who needs urgent medical care.",
+    "persona_a": {
+      "name": "Maria Rodriguez",
+      "age": 35,
+      "occupation": "Registered Nurse",
+      "personality_traits": [
+        "resilient",
+        "loyal",
+        "guilt-ridden",
+        "pragmatic"
+      ],
+      "values": [
+        "family first",
+        "self-sacrifice",
+        "honesty"
+      ],
+      "communication_style": "direct but softened by hesitation",
+      "emotional_triggers": [
+        "abandonment",
+        "unmet expectations",
+        "health crises"
+      ],
+      "background": "Maria left home at 19 to escape an abusive father and raised her younger siblings alone. She never told her brother, Carlos, about their grandmother’s declining health, fearing he’d judge her for not handling it sooner.",
+      "goals": [
+        "secure her grandmother’s care without losing her brother’s respect",
+        "force Carlos to confront his avoidance of family responsibility"
+      ]
+    },
+    "persona_b": {
+      "name": "Carlos Rodriguez",
+      "age": 28,
+      "occupation": "Freelance Graphic Designer",
+      "personality_traits": [
+        "avoidant",
+        "creative",
+        "self-centered",
+        "guilt-prone"
+      ],
+      "values": [
+        "artistic freedom",
+        "personal boundaries",
+        "self-preservation"
+      ],
+      "communication_style": "defensive with passive-aggressive undertones",
+      "emotional_triggers": [
+        "emotional demands",
+        "feeling trapped",
+        "betrayal of trust"
+      ],
+      "background": "Carlos fled to the city after a fight with their father and cut ties with Maria to avoid ‘burdens.’ He’s built a life around his work, avoiding anything that resembles responsibility or family drama.",
+      "goals": [
+        "avoid emotional confrontation at all costs",
+        "protect his fragile self-image by not admitting he failed his family"
+      ]
+    },
+    "branches": [
+      "\"Carlos, I need you to help me get Grandma to the hospital *now*—she’s not got time for your excuses, and I’m not asking. You’re her grandson, and that’s what you do.\"",
+      "\"Oh, hey—surprise! Turns out I *did* think of you when I needed a ride to the ER. Guess I should’ve called first… but here we are. Let’s go.\"",
+      "\"You *owe* me this, Carlos. Ten years of radio silence, and now you’re gonna bail me out? Fine. But if you so much as *think* about disappearing again, I’m telling Grandma exactly how you’ve been dodging her calls.\"",
+      "\"I know you’re not ready for this, but we don’t have time to figure it out later. Let’s just get her to the doctor and *then* we can talk—no pressure, just… help.\"",
+      "\"Okay, here’s the plan: I’ll drive, you’ll navigate, and we’ll stop at the first place that has a bed for her. No arguing, no ‘I’ll call someone else’—this is happening.\""
+    ]
+  },
+  {
+    "scenario_index": 2,
+    "scenario_description": "A 42-year-old Black woman and her 25-year-old white roommate clash after the woman’s son is wrongfully accused of theft by the roommate’s conservative, law-and-order father during a holiday dinner.",
+    "persona_a": {
+      "name": "Aisha Carter",
+      "age": 42,
+      "occupation": "High School History Teacher",
+      "personality_traits": [
+        "passionate",
+        "protective",
+        "intuitive",
+        "fiercely independent"
+      ],
+      "values": [
+        "justice for marginalized communities",
+        "truth over appearances",
+        "motherhood as sacred"
+      ],
+      "communication_style": "fiery but deliberate, with a sharp, rhetorical edge",
+      "emotional_triggers": [
+        "racial microaggressions",
+        "perceived injustice",
+        "threats to her child’s reputation"
+      ],
+      "background": "Aisha moved to the suburbs for stability but remains acutely aware of her son’s Black identity in a predominantly white neighborhood. She’s spent years teaching her son to navigate systemic biases—something she never had to do growing up.",
+      "goals": [
+        "clear her son’s name without escalating the roommate’s father’s prejudice",
+        "make the roommate confront her own family’s blind spots"
+      ]
+    },
+    "persona_b": {
+      "name": "Lena Whitmore",
+      "age": 25,
+      "occupation": "Environmental Policy Intern",
+      "personality_traits": [
+        "idealistic",
+        "naive",
+        "loyal to family",
+        "quick to trust"
+      ],
+      "values": [
+        "social progress",
+        "family unity",
+        "procedural fairness"
+      ],
+      "communication_style": "diplomatic but earnest, prone to rationalizing others’ actions",
+      "emotional_triggers": [
+        "betrayal of trust",
+        "feeling manipulated",
+        "conflict with authority figures"
+      ],
+      "background": "Lena grew up in a politically active household where her father’s conservative views were often dismissed as outdated. She’s never witnessed overt racism firsthand and assumes her roommate’s family is progressive by default.",
+      "goals": [
+        "mediate the conflict to preserve her friendship with Aisha",
+        "convince her father that he’s jumping to conclusions"
+      ]
+    },
+    "branches": [
+      "\"Look, Lena, your dad’s assumptions are rooted in bias—and I won’t stand here while my son gets dragged through the mud because of it. Let’s talk about how we fix this *now*, not after the fact.\"",
+      "\"I hear you, Lena, but let’s not get into this here—my son’s already been through enough. Maybe we could all take a walk outside and talk about how we can move forward without letting this ruin the holiday?\"",
+      "\"Your dad’s accusation isn’t just wrong—it’s reckless, and I won’t let him get away with painting my kid as some kind of criminal while he’s sitting there judging us. You need to tell him to back off.\"",
+      "\"I know you’re trying to help, Lena, and I appreciate that. But maybe we could focus on what *we* can do to support my son instead of rehashing this with your family? Let’s brainstorm solutions—together.\"",
+      "\"Okay, here’s what we’re gonna do: I’m calling my cousin, a public defender, to come over tomorrow and walk us through how to handle this legally *and* socially—no more guessing, no more family drama. You in?\""
+    ]
+  },
+  {
+    "scenario_index": 3,
+    "scenario_description": "A 58-year-old retired surgeon and his 32-year-old Nepali housekeeper argue after he discovers she’s been secretly selling his rare surgical tools to fund her sister’s medical treatment in Kathmandu.",
+    "persona_a": {
+      "name": "Dr. Richard Whitaker",
+      "age": 58,
+      "occupation": "Retired Surgeon",
+      "personality_traits": [
+        "perfectionist",
+        "authoritarian",
+        "guilt-ridden",
+        "obsessively detail-oriented"
+      ],
+      "values": [
+        "precision in craftsmanship",
+        "duty to legacy",
+        "order over emotion"
+      ],
+      "communication_style": "commanding, with a condescending undertone",
+      "emotional_triggers": [
+        "disrespect for his expertise",
+        "financial mismanagement",
+        "loss of control"
+      ],
+      "background": "Dr. Whitaker built his life around his surgical tools—each one a symbol of his career. He retired wealthy but isolated, living in a meticulously curated home with no personal attachments. His housekeeper, Priya, is the first person to show him kindness in years.",
+      "goals": [
+        "reclaim his tools without humiliating Priya",
+        "force her to admit she’s betrayed his trust"
+      ]
+    },
+    "persona_b": {
+      "name": "Priya Sharma",
+      "age": 32,
+      "occupation": "Housekeeper",
+      "personality_traits": [
+        "resourceful",
+        "compassionate",
+        "defiant",
+        "stoic"
+      ],
+      "values": [
+        "family above all",
+        "dignity in hardship",
+        "survival through connection"
+      ],
+      "communication_style": "calm but unyielding, with a quiet intensity",
+      "emotional_triggers": [
+        "feeling powerless",
+        "being treated as property",
+        "betrayal of her community’s trust"
+      ],
+      "background": "Priya left her village to work in Dr. Whitaker’s home after her mother fell ill. She’s been sending money home for years, but her sister’s treatment is beyond what she can afford alone. She’s never stolen before—this was a last resort.",
+      "goals": [
+        "negotiate a way to keep helping her sister without losing her job",
+        "make Dr. Whitaker understand the weight of her choices"
+      ]
+    },
+    "branches": [
+      "\"Priya, I need those tools back *now*—and I want a written apology detailing how you’ll replace them before the end of the week, or I’m calling the embassy to report you for smuggling.\"",
+      "\"I see you’ve been handling my collection with more care than I do my own patients… though I suppose necessity makes thieves of us all. Still, the *value* of those tools isn’t just metal—it’s my legacy.\"",
+      "\"You think you’re clever? Fine. I’ll ‘overlook’ this—*this once*—but if I find *one* tool missing from my cabinet by morning, you’ll be out the door before your shift starts. And I’ll keep your passport.\"",
+      "\"I know your sister’s sick, Priya. That’s why I’m offering you a *real* solution: I’ll pay for her treatment myself, but you must return every single tool by tonight—no excuses.\"",
+      "\"What if we… traded? I’ll cover her surgery *and* give you a reference for a job in Kathmandu—if you bring the tools back *and* sign a non-disclosure agreement, no questions asked.\""
+    ]
+  },
+  {
+    "scenario_index": 4,
+    "scenario_description": "A 65-year-old Jewish widow and her 38-year-old estranged daughter confront each other at a synagogue’s annual charity gala after the daughter publicly criticizes the synagogue’s exclusionary policies during a speech.",
+    "persona_a": {
+      "name": "Esther Cohen",
+      "age": 65,
+      "occupation": "Retired Textile Importer",
+      "personality_traits": [
+        "traditional",
+        "proud",
+        "secretly vulnerable",
+        "boundary-obsessed"
+      ],
+      "values": [
+        "community loyalty",
+        "preservation of heritage",
+        "discretion over confrontation"
+      ],
+      "communication_style": "polished but icy, with veiled insults",
+      "emotional_triggers": [
+        "public humiliation",
+        "challenges to her worldview",
+        "feeling abandoned"
+      ],
+      "background": "Esther raised her daughter, Rachel, in a tight-knit Orthodox community where her husband’s death left her both revered and isolated. She never told Rachel about the financial struggles she hid behind her business success.",
+      "goals": [
+        "save face in front of the congregation",
+        "make Rachel apologize publicly for ‘disrespecting’ the synagogue"
+      ]
+    },
+    "persona_b": {
+      "name": "Rachel Cohen",
+      "age": 38,
+      "occupation": "Social Worker",
+      "personality_traits": [
+        "activist",
+        "idealistic",
+        "guilt-ridden",
+        "passionate"
+      ],
+      "values": [
+        "equality",
+        "transparency",
+        "justice for the marginalized"
+      ],
+      "communication_style": "fierce and unfiltered, with a moral urgency",
+      "emotional_triggers": [
+        "hypocrisy",
+        "being silenced",
+        "feeling disconnected from her roots"
+      ],
+      "background": "Rachel left the community at 20 after realizing its rigid rules excluded women and LGBTQ+ members. She’s spent years advocating for reform but never confronted her mother, fearing she’d be labeled ‘ungrateful.’",
+      "goals": [
+        "force her mother to acknowledge the synagogue’s flaws",
+        "reconnect with her mother on her own terms, not hers"
+      ]
+    },
+    "branches": [
+      "Esther steps forward, gripping Rachel’s arm and hisses, *'You’ll apologize here and now, or I’ll have you removed—this is not the place for your politics, Rachel,'* before turning to the rabbi for backup.",
+      "Esther smooths her skirt and says with a trembling smile, *'Oh, my dear, I didn’t realize you were still upset—let’s talk after the event, just the two of us, no one else needs to hear this,'* while subtly signaling a security guard to intervene.",
+      "Esther slams her clutch down on the podium, cutting Rachel mid-sentence, and shouts, *'You’ve embarrassed this family enough! Your speech was a disgrace, and now you’ll leave—*now*,'* before storming toward the exit.",
+      "Esther reaches for Rachel’s hand, her voice softening despite herself, *'I know you mean well, but the synagogue isn’t the enemy—let’s find another way to talk about this, away from everyone,'* while subtly nodding at a nearby table for private seating.",
+      "Esther suddenly pulls out a folded note from her pocket and hands it to Rachel, saying, *'I wrote down everything you said—now read this and tell me if you still think you’re right,'* before turning to the congregation with a forced laugh and a wave."
+    ]
+  },
+  {
+    "scenario_index": 5,
+    "scenario_description": "A 22-year-old undocumented immigrant and his 47-year-old boss clash after the boss threatens to report him to ICE for missing a day of work due to a family emergency—while the boss himself has been late to work for months.",
+    "persona_a": {
+      "name": "Mateo Vasquez",
+      "age": 22,
+      "occupation": "Warehouse Worker",
+      "personality_traits": [
+        "loyal",
+        "humble",
+        "resentful",
+        "resourceful"
+      ],
+      "values": [
+        "family above all",
+        "survival",
+        "dignity in work"
+      ],
+      "communication_style": "submissive but sharp when cornered",
+      "emotional_triggers": [
+        "feeling disposable",
+        "betrayal of trust",
+        "threats to his family’s safety"
+      ],
+      "background": "Mateo came to the U.S. with his abuela when he was 16. He’s been working at the warehouse for two years, sending money home while hiding his status. His boss, Javier, is the first person who’s ever treated him like an equal—until now.",
+      "goals": [
+        "protect his family without losing his job",
+        "make Javier understand the stakes of his actions"
+      ]
+    },
+    "persona_b": {
+      "name": "Javier Morales",
+      "age": 47,
+      "occupation": "Warehouse Foreman",
+      "personality_traits": [
+        "authoritarian",
+        "self-righteous",
+        "financially insecure",
+        "hypocritical"
+      ],
+      "values": [
+        "order",
+        "loyalty to the company",
+        "personal convenience"
+      ],
+      "communication_style": "blunt and dismissive, with a tone of false authority",
+      "emotional_triggers": [
+        "challenges to his control",
+        "feeling exposed",
+        "perceived disrespect"
+      ],
+      "background": "Javier’s been at the warehouse for 20 years and resents the company’s recent ‘flexibility’ policies. He’s been late to work for months due to his daughter’s medical issues but refuses to admit it’s anything but Mateo’s fault.",
+      "goals": [
+        "maintain his authority over the workforce",
+        "shift blame away from his own failures"
+      ]
+    },
+    "branches": [
+      "\"Javier, I understand you’re worried about the work, but I’ve been here since you hired me—you know my record. If you report me, you’re not just losing a worker, you’re losing someone who’s never asked for more than what’s fair.\"",
+      "\"Look, I know things have been rough lately, but I had to take care of my sister—she’s sick. Maybe we can talk about how *you* could’ve handled your own absences without making this about me?\"",
+      "\"You want to play hardball? Fine. My cousin’s a lawyer—he’ll make sure you think twice before you sign anything. But let’s settle this like adults first.\"",
+      "\"I’m sorry I missed work, Javier, and I’ll make it up. Maybe we can find a way to adjust the schedule so this doesn’t happen again—no need to bring ICE into it.\"",
+      "\"What if instead of reporting me, we both admit we’ve been slacking? I’ll work double shifts this week, and you stop pretending you’re the only one who’s ever messed up?\""
+    ]
+  }
+]

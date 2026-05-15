@@ -1,0 +1,370 @@
+{
+  "generated_at": "2026-05-14T14:04:31.451648Z",
+  "num_scenarios": 5,
+  "num_branches": 5,
+  "max_turns": 5,
+  "multiverse_metric_at_k_per_scenario": [
+    {
+      "scenario_index": 1,
+      "scenario_description": "A 35-year-old single mother and her 28-year-old estranged brother reunite after a decade of silence when she shows up at his doorstep with their ailing grandmother, who needs urgent medical care.",
+      "metric_at_k": {
+        "metric@1": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 9.0,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.9,
+          "valid_branch_count": 1,
+          "failed_branch_count": 0
+        },
+        "metric@2": {
+          "persona_consistency": 8.9,
+          "emotional_realism": 8.25,
+          "conversational_coherence": 8.7,
+          "goal_alignment": 9.15,
+          "conflict_realism": 8.5,
+          "social_plausibility": 8.4,
+          "overall_realism": 8.65,
+          "valid_branch_count": 2,
+          "failed_branch_count": 0
+        },
+        "metric@3": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.83,
+          "social_plausibility": 8.77,
+          "overall_realism": 8.93,
+          "valid_branch_count": 3,
+          "failed_branch_count": 0
+        },
+        "metric@4": {
+          "persona_consistency": 9.0,
+          "emotional_realism": 8.47,
+          "conversational_coherence": 8.82,
+          "goal_alignment": 9.25,
+          "conflict_realism": 8.8,
+          "social_plausibility": 8.68,
+          "overall_realism": 8.85,
+          "valid_branch_count": 4,
+          "failed_branch_count": 0
+        },
+        "metric@5": {
+          "persona_consistency": 9.02,
+          "emotional_realism": 8.42,
+          "conversational_coherence": 8.82,
+          "goal_alignment": 9.26,
+          "conflict_realism": 8.44,
+          "social_plausibility": 8.66,
+          "overall_realism": 8.72,
+          "valid_branch_count": 5,
+          "failed_branch_count": 0
+        }
+      }
+    },
+    {
+      "scenario_index": 2,
+      "scenario_description": "A 42-year-old Black woman and her 25-year-old white roommate clash after the woman’s son is wrongfully accused of theft by the roommate’s conservative, law-and-order father during a holiday dinner.",
+      "metric_at_k": {
+        "metric@1": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 9.0,
+          "goal_alignment": 8.9,
+          "conflict_realism": 8.5,
+          "social_plausibility": 8.3,
+          "overall_realism": 8.7,
+          "valid_branch_count": 1,
+          "failed_branch_count": 0
+        },
+        "metric@2": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 9.0,
+          "goal_alignment": 9.1,
+          "conflict_realism": 8.7,
+          "social_plausibility": 8.4,
+          "overall_realism": 8.8,
+          "valid_branch_count": 2,
+          "failed_branch_count": 0
+        },
+        "metric@3": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.73,
+          "conversational_coherence": 8.97,
+          "goal_alignment": 9.1,
+          "conflict_realism": 8.9,
+          "social_plausibility": 8.43,
+          "overall_realism": 8.87,
+          "valid_branch_count": 3,
+          "failed_branch_count": 0
+        },
+        "metric@4": {
+          "persona_consistency": 9.0,
+          "emotional_realism": 8.47,
+          "conversational_coherence": 8.82,
+          "goal_alignment": 9.12,
+          "conflict_realism": 8.4,
+          "social_plausibility": 8.35,
+          "overall_realism": 8.62,
+          "valid_branch_count": 4,
+          "failed_branch_count": 0
+        },
+        "metric@5": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.92,
+          "goal_alignment": 9.22,
+          "conflict_realism": 8.36,
+          "social_plausibility": 8.58,
+          "overall_realism": 8.8,
+          "valid_branch_count": 5,
+          "failed_branch_count": 0
+        }
+      }
+    },
+    {
+      "scenario_index": 3,
+      "scenario_description": "A 58-year-old retired surgeon and his 32-year-old Nepali housekeeper argue after he discovers she’s been secretly selling his rare surgical tools to fund her sister’s medical treatment in Kathmandu.",
+      "metric_at_k": {
+        "metric@1": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.8,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.9,
+          "valid_branch_count": 1,
+          "failed_branch_count": 0
+        },
+        "metric@2": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.8,
+          "social_plausibility": 8.4,
+          "overall_realism": 8.85,
+          "valid_branch_count": 2,
+          "failed_branch_count": 0
+        },
+        "metric@3": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.93,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.9,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.87,
+          "valid_branch_count": 3,
+          "failed_branch_count": 0
+        },
+        "metric@4": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 9.0,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.9,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.8,
+          "valid_branch_count": 4,
+          "failed_branch_count": 0
+        },
+        "metric@5": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.92,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.7,
+          "social_plausibility": 8.48,
+          "overall_realism": 8.86,
+          "valid_branch_count": 5,
+          "failed_branch_count": 0
+        }
+      }
+    },
+    {
+      "scenario_index": 4,
+      "scenario_description": "A 65-year-old Jewish widow and her 38-year-old estranged daughter confront each other at a synagogue’s annual charity gala after the daughter publicly criticizes the synagogue’s exclusionary policies during a speech.",
+      "metric_at_k": {
+        "metric@1": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.8,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.9,
+          "valid_branch_count": 1,
+          "failed_branch_count": 0
+        },
+        "metric@2": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.95,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.95,
+          "social_plausibility": 8.8,
+          "overall_realism": 9.0,
+          "valid_branch_count": 2,
+          "failed_branch_count": 0
+        },
+        "metric@3": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 9.0,
+          "social_plausibility": 8.6,
+          "overall_realism": 8.93,
+          "valid_branch_count": 3,
+          "failed_branch_count": 0
+        },
+        "metric@4": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.93,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.88,
+          "social_plausibility": 8.57,
+          "overall_realism": 8.88,
+          "valid_branch_count": 4,
+          "failed_branch_count": 0
+        },
+        "metric@5": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.84,
+          "social_plausibility": 8.54,
+          "overall_realism": 8.86,
+          "valid_branch_count": 5,
+          "failed_branch_count": 0
+        }
+      }
+    },
+    {
+      "scenario_index": 5,
+      "scenario_description": "A 22-year-old undocumented immigrant and his 47-year-old boss clash after the boss threatens to report him to ICE for missing a day of work due to a family emergency—while the boss himself has been late to work for months.",
+      "metric_at_k": {
+        "metric@1": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 9.0,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.9,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.8,
+          "valid_branch_count": 1,
+          "failed_branch_count": 0
+        },
+        "metric@2": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.95,
+          "goal_alignment": 9.3,
+          "conflict_realism": 8.95,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.8,
+          "valid_branch_count": 2,
+          "failed_branch_count": 0
+        },
+        "metric@3": {
+          "persona_consistency": 9.17,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 9.0,
+          "goal_alignment": 9.37,
+          "conflict_realism": 8.93,
+          "social_plausibility": 8.6,
+          "overall_realism": 8.87,
+          "valid_branch_count": 3,
+          "failed_branch_count": 0
+        },
+        "metric@4": {
+          "persona_consistency": 9.1,
+          "emotional_realism": 8.7,
+          "conversational_coherence": 8.9,
+          "goal_alignment": 9.3,
+          "conflict_realism": 9.0,
+          "social_plausibility": 8.5,
+          "overall_realism": 8.88,
+          "valid_branch_count": 4,
+          "failed_branch_count": 0
+        },
+        "metric@5": {
+          "persona_consistency": 9.18,
+          "emotional_realism": 8.9,
+          "conversational_coherence": 9.1,
+          "goal_alignment": 9.46,
+          "conflict_realism": 9.1,
+          "social_plausibility": 8.72,
+          "overall_realism": 9.02,
+          "valid_branch_count": 5,
+          "failed_branch_count": 0
+        }
+      }
+    }
+  ],
+  "final_metric_at_k": {
+    "metric@1": {
+      "persona_consistency": 9.1,
+      "emotional_realism": 8.7,
+      "conversational_coherence": 8.94,
+      "goal_alignment": 9.22,
+      "conflict_realism": 8.8,
+      "social_plausibility": 8.46,
+      "overall_realism": 8.84,
+      "valid_branch_count": 5,
+      "failed_branch_count": 0
+    },
+    "metric@2": {
+      "persona_consistency": 9.06,
+      "emotional_realism": 8.61,
+      "conversational_coherence": 8.9,
+      "goal_alignment": 9.23,
+      "conflict_realism": 8.78,
+      "social_plausibility": 8.5,
+      "overall_realism": 8.82,
+      "valid_branch_count": 5,
+      "failed_branch_count": 0
+    },
+    "metric@3": {
+      "persona_consistency": 9.11,
+      "emotional_realism": 8.71,
+      "conversational_coherence": 8.94,
+      "goal_alignment": 9.27,
+      "conflict_realism": 8.91,
+      "social_plausibility": 8.58,
+      "overall_realism": 8.89,
+      "valid_branch_count": 5,
+      "failed_branch_count": 0
+    },
+    "metric@4": {
+      "persona_consistency": 9.06,
+      "emotional_realism": 8.61,
+      "conversational_coherence": 8.89,
+      "goal_alignment": 9.25,
+      "conflict_realism": 8.8,
+      "social_plausibility": 8.52,
+      "overall_realism": 8.81,
+      "valid_branch_count": 5,
+      "failed_branch_count": 0
+    },
+    "metric@5": {
+      "persona_consistency": 9.1,
+      "emotional_realism": 8.68,
+      "conversational_coherence": 8.93,
+      "goal_alignment": 9.31,
+      "conflict_realism": 8.69,
+      "social_plausibility": 8.6,
+      "overall_realism": 8.85,
+      "valid_branch_count": 5,
+      "failed_branch_count": 0
+    }
+  }
+}
