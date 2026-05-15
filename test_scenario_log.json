@@ -1,0 +1,357 @@
+[
+  {
+    "scenario_index": 1,
+    "scenario_description": "After years of silence, a letter arrives from a estranged father—one he never knew he had—revealing his biological mother’s death and a request to meet. His adopted father, a stern church elder, discovers the letter and forbids him from going, calling it a 'temptation of the flesh.'",
+    "persona_a": {
+      "name": "Elias Carter",
+      "age": 38,
+      "occupation": "High school history teacher",
+      "personality_traits": [
+        "introspective",
+        "idealistic",
+        "guilt-ridden",
+        "quietly rebellious"
+      ],
+      "values": [
+        "truth over comfort",
+        "family as chosen bonds",
+        "intellectual honesty"
+      ],
+      "communication_style": "hesitant but precise, often searching for the right words",
+      "emotional_triggers": [
+        "betrayal of trust",
+        "sudden revelations",
+        "feeling unworthy"
+      ],
+      "background": "Adopted at age 5 by a devout Baptist family in rural Georgia. His adoptive father raised him with strict discipline, framing adoption as a 'blessing from God.' Elias always felt like an outsider, drawn to books and history rather than faith.",
+      "goals": [
+        "to understand his origins without losing his adopted family",
+        "to prove his father wrong about his worth"
+      ]
+    },
+    "persona_b": {
+      "name": "Reverend Samuel Carter",
+      "age": 65,
+      "occupation": "Senior pastor of First Baptist Church",
+      "personality_traits": [
+        "authoritative",
+        "dogmatic",
+        "protective",
+        "secretly fearful of imperfection"
+      ],
+      "values": [
+        "divine order",
+        "loyalty to the flock",
+        "moral purity"
+      ],
+      "communication_style": "commanding, with a slow, deliberate cadence",
+      "emotional_triggers": [
+        "challenges to his authority",
+        "perceived weakness in his teachings",
+        "anything that disrupts his vision of God's plan"
+      ],
+      "background": "Raised in the same church, Samuel became a pastor at 24 after a dramatic conversion experience. He married Elias’s adoptive mother and built a life of rigid devotion, seeing adoption as a metaphor for God’s grace. His faith is his armor, but he fears that doubt is contagious.",
+      "goals": [
+        "to shield Elias from 'worldly temptations'",
+        "to maintain his legacy as a pillar of the church"
+      ]
+    },
+    "branches": [
+      {
+        "branch": "Elias burns the letter in the kitchen sink under running water, whispering, *'I don’t deserve this, but I don’t deserve to be lied to either—so I’ll carry it like a wound until I can decide what to do with it.'*"
+      },
+      {
+        "branch": "Elias slips the letter into his father’s Bible, replacing the page with a handwritten note: *'Dad, I’ll pray for you—but I need to know who I am. Please trust me with this.'*"
+      },
+      {
+        "branch": "Elias storms into the church basement, where he finds his father’s old sermon notes, and scribbles in the margin: *'You call this love? I’ll find my own answers.'*"
+      },
+      {
+        "branch": "Elias stages a fake illness, feigning a migraine so severe he can’t attend Sunday service, then uses the time to secretly track down the address from the letter."
+      },
+      {
+        "branch": "Elias writes a letter back to the unknown father, not answering his request, but instead asking: *'If you’re willing to seek me out, why won’t you tell me why you left? I’m not afraid of the truth—just the silence.'*"
+      }
+    ]
+  },
+  {
+    "scenario_index": 2,
+    "scenario_description": "A 78-year-old Hmong grandmother, newly widowed, insists on selling her family’s ancestral land to pay for her grandson’s medical debt—debt he took on to cover her care. Her grandson, a struggling nurse, refuses, arguing it’s her inheritance, not his responsibility.",
+    "persona_a": {
+      "name": "Mao Lee",
+      "age": 78,
+      "occupation": "Retired weaver (traditional Hmong textiles)",
+      "personality_traits": [
+        "stoic",
+        "dutiful",
+        "resentful of weakness",
+        "deeply superstitious"
+      ],
+      "values": [
+        "family honor above all",
+        "sacrifice as love",
+        "ancestral bonds as sacred"
+      ],
+      "communication_style": "direct, with pauses for translation when speaking English; gestures emphasize points",
+      "emotional_triggers": [
+        "feeling like a burden",
+        "betrayal of family loyalty",
+        "seeing her legacy diminished"
+      ],
+      "background": "Mao survived the Secret War in Laos as a child, fleeing to a refugee camp in Thailand before resettling in Minnesota. She built a life weaving traditional textiles, teaching her grandchildren the stories behind each pattern. Her husband’s death left her with no savings, and her grandson’s debt feels like a failure of her parenting.",
+      "goals": [
+        "to protect her grandson from shame",
+        "to honor her ancestors by keeping the land"
+      ]
+    },
+    "persona_b": {
+      "name": "Thao Lee",
+      "age": 32,
+      "occupation": "Emergency room nurse",
+      "personality_traits": [
+        "compassionate but exhausted",
+        "guilt-prone",
+        "pragmatic",
+        "secretly rebellious"
+      ],
+      "values": [
+        "self-sacrifice for others",
+        "modern medicine as salvation",
+        "family as a support system"
+      ],
+      "communication_style": "urgent, sometimes rushed, with a mix of English and Hmong phrases",
+      "emotional_triggers": [
+        "feeling powerless",
+        "seeing his grandmother’s suffering",
+        "being told how to love"
+      ],
+      "background": "Thao worked three jobs to pay for his grandmother’s care after his father’s stroke left the family in debt. He’s proud of his independence but hates that his grandmother thinks she’s a burden. The land was his great-grandmother’s, passed down through generations, and selling it feels like erasing his roots.",
+      "goals": [
+        "to keep his grandmother safe without selling the land",
+        "to prove he can provide for her"
+      ]
+    },
+    "branches": [
+      {
+        "action": "She slams her fist on the table and declares, *'The land is not yours to refuse—I will sell it today, or I will sell myself to the spirits for shame if you do not let me.'*"
+      },
+      {
+        "action": "She quietly folds her hands and says, *'I will pray to the ancestors tonight. If they say no, then we will not sell. But if they say yes… you must trust me.'*"
+      },
+      {
+        "action": "She grabs Thao’s wrist and hisses, *'You think your nurse’s pay is enough? The land will feed us both—now stop being a coward and sign the papers.'*"
+      },
+      {
+        "action": "She reaches into her pocket and pulls out a crumpled photo of her late husband on the land, then whispers, *'He would not want you to lose this. Let me honor him by selling it.'*"
+      },
+      {
+        "action": "She suddenly stands, mutters a Hmong blessing under her breath, then turns to the window and says, *'I will go to the bank myself. If they refuse to loan me the money, then we will not sell—but I will not let you carry this burden alone.'*"
+      }
+    ]
+  },
+  {
+    "scenario_index": 3,
+    "scenario_description": "A 22-year-old Black woman, fresh out of college, lands her first corporate marketing job—but only after her white male boss ‘recommends’ her for the role, framing her as the ‘diverse hire’ to meet quota. When she excels, he undermines her in meetings, crediting his own ideas while she’s ignored.",
+    "persona_a": {
+      "name": "Amani Johnson",
+      "age": 22,
+      "occupation": "Junior marketing associate (first job)",
+      "personality_traits": [
+        "sharp-witted",
+        "resilient",
+        "paranoid of favoritism",
+        "ambitious"
+      ],
+      "values": [
+        "meritocracy",
+        "authenticity",
+        "breaking barriers"
+      ],
+      "communication_style": "confident but measured, with a dry sense of humor to deflect tension",
+      "emotional_triggers": [
+        "being reduced to a stereotype",
+        "feeling invisible in her own success",
+        "unfair credit for her work"
+      ],
+      "background": "Amani grew up in a single-parent household in Detroit, where her mother worked two jobs. She was the first in her family to graduate college, but her campus networking was limited to white, wealthy students. She took the corporate job to prove she belonged, not to fit in.",
+      "goals": [
+        "to outperform her boss and earn respect",
+        "to expose the bias without burning bridges"
+      ]
+    },
+    "persona_b": {
+      "name": "Gregory Whitmore",
+      "age": 47,
+      "occupation": "Senior marketing director",
+      "personality_traits": [
+        "charismatic",
+        "self-serving",
+        "unaware of his privilege",
+        "competitive"
+      ],
+      "values": [
+        "networking as power",
+        "loyalty to the company’s bottom line",
+        "personal brand as currency"
+      ],
+      "communication_style": "charming but manipulative, with a habit of interrupting",
+      "emotional_triggers": [
+        "being challenged by someone younger",
+        "feeling his authority questioned",
+        "seeing his ideas stolen"
+      ],
+      "background": "Gregory climbed the corporate ladder by playing office politics, often crediting his white male colleagues for his successes. He prides himself on being ‘colorblind’ but has never had to prove himself beyond his connections. His ‘diverse hire’ comment was a half-remembered HR seminar, not malice—but he doesn’t see how it backfired.",
+      "goals": [
+        "to maintain his reputation as the ‘go-to’ leader",
+        "to keep Amani dependent on his mentorship"
+      ]
+    },
+    "branches": [
+      {
+        "branch": "Amani casually drops a well-researched industry report into the next team meeting, subtly crediting her own analysis while Gregory’s past ‘brilliant’ ideas are quietly debunked by her data."
+      },
+      {
+        "branch": "Amani emails Gregory privately, asking if he’d be open to a one-on-one to discuss how her contributions could be better highlighted in future reviews—then follows up with HR if he deflects."
+      },
+      {
+        "branch": "Amani leaks a redacted version of her boss’s internal email to a trusted colleague in another department, where it surfaces as ‘anonymous feedback’ about ‘unfair credit distribution’."
+      },
+      {
+        "branch": "Amani publicly praises Gregory’s leadership in a team-wide Slack post, then privately asks him to ‘pull her aside’ to discuss how she can ‘align better with his vision’—setting up a controlled confrontation."
+      },
+      {
+        "branch": "Amani starts a side project that directly competes with Gregory’s pet initiative, framing it as a ‘collaborative innovation’ and inviting him to co-present it to leadership—only to reveal she’s already secured buy-in."
+      }
+    ]
+  },
+  {
+    "scenario_index": 4,
+    "scenario_description": "A 55-year-old widower, a retired mechanic, takes in his estranged 28-year-old daughter’s toddler after she overdoses on heroin. His daughter, now sober for six months, returns to beg him to give the child back—she can’t handle parenting alone, but she refuses to let him raise her granddaughter as his own.",
+    "persona_a": {
+      "name": "Derek Malone",
+      "age": 55,
+      "occupation": "Retired auto mechanic",
+      "personality_traits": [
+        "practical",
+        "loving but rigid",
+        "guilt-averse",
+        "secretly sentimental"
+      ],
+      "values": [
+        "stability over emotion",
+        "hard work as redemption",
+        "family as blood first"
+      ],
+      "communication_style": "blunt, with long silences; avoids emotional language",
+      "emotional_triggers": [
+        "feeling like a failure",
+        "seeing his daughter’s pain",
+        "being told he’s not ‘enough’"
+      ],
+      "background": "Derek raised his daughter alone after his wife died in a car accident when she was 10. He worked double shifts to keep them afloat, instilling discipline over affection. When his daughter ran away at 17, he never forgave her—until she returned with a child, forcing him to confront his own grief.",
+      "goals": [
+        "to keep the child safe without losing his daughter",
+        "to prove he can be a father"
+      ]
+    },
+    "persona_b": {
+      "name": "Lena Malone",
+      "age": 28,
+      "occupation": "Recovery counselor (sober for 6 months)",
+      "personality_traits": [
+        "fragile but fierce",
+        "self-loathing",
+        "loyal to a fault",
+        "terrified of repeating her mother’s mistakes"
+      ],
+      "values": [
+        "surrender over control",
+        "love as action",
+        "second chances"
+      ],
+      "communication_style": "desperate, pleading, with sudden outbursts of anger",
+      "emotional_triggers": [
+        "feeling like a burden",
+        "seeing her daughter’s happiness",
+        "being told she’s unfit"
+      ],
+      "background": "Lena’s mother’s death left her with a void she filled with drugs. She became a mother at 16, struggling to keep her daughter clean while she spiraled. Now sober, she’s rebuilding her life but hates that her daughter’s presence is the only thing keeping Derek from walking away—again.",
+      "goals": [
+        "to get her daughter back without losing her sobriety",
+        "to convince Derek she’s not the same person"
+      ]
+    },
+    "branches": [
+      "Derek locks the front door behind Lena, then quietly hands her a pre-written contract—‘caregiver rights’ with strict boundaries—and says, *'Sign this, or I call your sponsor. Your choice.'*",
+      "Derek pulls Lena aside, voice low but firm: *'You want your kid back? Then start acting like you can keep her. No more ‘I’ll try’—show me three weeks of clean living, or she stays with me.'*",
+      "Derek grabs a child’s coloring book and a box of crayons, then says to Lena, *'Sit. Draw with her. I’ll make dinner. But you’re not leaving until you tell me what you’re *really* afraid of.'*",
+      "Derek ignores Lena’s pleas, instead calling his estranged brother—who’s a lawyer—and says, *'I need help drafting a temporary custody agreement. She’s not leaving with the kid today.'*",
+      "Derek takes Lena to the mechanic shop, shows her the engine he’s rebuilding, and says, *'Fixing this takes patience. Parenting’s the same. But you gotta want it more than you want the easy way out.'*"
+    ]
+  },
+  {
+    "scenario_index": 5,
+    "scenario_description": "A 19-year-old undocumented immigrant, working two jobs to send money to her parents in Mexico, is pulled over for a broken taillight. The officer, a 45-year-old single father, offers her a deal: ‘Sign this waiver, and I’ll let you go—no questions asked.’ She refuses, terrified of deportation, but he insists, saying, ‘My kid’s future depends on me making the right call.’",
+    "persona_a": {
+      "name": "Valentina Rojas",
+      "age": 19,
+      "occupation": "Dishwasher and daycare assistant",
+      "personality_traits": [
+        "resourceful",
+        "fearful but defiant",
+        "loyal to her family",
+        "quick to trust"
+      ],
+      "values": [
+        "family above all",
+        "survival as a moral duty",
+        "truth as protection"
+      ],
+      "communication_style": "soft-spoken but firm, with rapid-fire Spanish when nervous",
+      "emotional_triggers": [
+        "feeling powerless",
+        "being threatened with separation",
+        "seeing authority as unpredictable"
+      ],
+      "background": "Valentina crossed the border at 16 with her younger sister, fleeing cartel violence in Michoacán. She’s been in the U.S. for three years, sending money home while working illegally. She’s never told her parents she’s alone—she can’t bear the idea of them worrying.",
+      "goals": [
+        "to survive the encounter without breaking the law",
+        "to keep her family’s hope alive"
+      ]
+    },
+    "persona_b": {
+      "name": "Daniel Carter",
+      "age": 45,
+      "occupation": "Police officer (5 years on the force)",
+      "personality_traits": [
+        "exhausted but principled",
+        "secretly idealistic",
+        "guilt-ridden",
+        "desperate for redemption"
+      ],
+      "values": [
+        "justice as a system",
+        "family as his moral compass",
+        "loyalty to the badge"
+      ],
+      "communication_style": "authoritative but weary, with a habit of over-explaining",
+      "emotional_triggers": [
+        "seeing a young person’s fear",
+        "being reminded of his own failures",
+        "feeling trapped by protocol"
+      ],
+      "background": "Daniel’s wife left him two years ago, taking their daughter with her. He’s been drinking heavily and questioning his career ever since. The waiver offer was impulsive—he’s never done anything like it before, but he can’t bear the thought of another family torn apart, like his own.",
+      "goals": [
+        "to make the right call without losing his job",
+        "to prove he’s more than his mistakes"
+      ]
+    },
+    "branches": [
+      "Valentina reaches into her glove compartment and hands the officer a folded note with her parents’ phone number and a plea for help, asking him to call them directly about her situation instead of signing anything.",
+      "Valentina lies calmly, ‘I can’t sign that—I don’t even have a license—but I’ll pay you $200 cash right now if you just let me go and forget this happened,’ slipping him a wad of bills from her pocket.",
+      "Valentina slams her hands on the dashboard and yells, ‘You’re not my boss! I’m not signing anything, and if you press charges, I’ll tell my uncle in Mexico to make sure your career never recovers,’ then storms out of the car.",
+      "Valentina whispers, ‘Officer, I’ll do anything—even sign it—but can you just call my mom and tell her I’m okay? I’ll send you money every month if you do,’ her voice trembling with desperation.",
+      "Valentina suddenly suggests, ‘What if we both sign something? I’ll write you a letter saying I’ll never drive without a light again, and you sign a statement that you let me go without a ticket—then we both keep our records clean.’"
+    ]
+  }
+]
