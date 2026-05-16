@@ -60,10 +60,10 @@ class PersonaMemory:
                 metadata={"hnsw:space": "cosine"}
             )
 
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001",
-            google_api_key=os.getenv("GEMINI_API_KEY")
-        )
+        # self.embeddings = GoogleGenerativeAIEmbeddings(
+        #     model="models/gemini-embedding-001",
+        #     google_api_key=os.getenv("GEMINI_API_KEY")
+        # )
 
     def store_memories_batch(self, memories: list[str], id_prefix: str):
         """Embed and store all memories in a single API call."""
