@@ -34,7 +34,6 @@ from backend.evaluation.multiverse_evaluate import evaluate_multiverse
 from backend.core.llm import get_evaluator          # reuse same Ollama model for generation
 import os
 from datetime import datetime
-import time
 import unicodedata
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -72,6 +71,9 @@ SCORE_LABELS = {
 
 _gen_llm = get_evaluator()   # Ollama model — used for generation too
 
+
+import time
+
 def _repair_json(raw: str) -> str:
     # Normalise unicode punctuation to ASCII equivalents or remove
     raw = unicodedata.normalize("NFKD", raw)
@@ -100,6 +102,11 @@ def _invoke_json(system: str, user: str, label: str,
             response = _gen_llm.invoke(messages)
             raw = response.content.strip()
 
+            # print(f"\n[DEBUG _invoke_json | {label} | attempt {attempt}]")
+            # print(f"  type(response.content) = {type(response.content)}")
+            # print(f"  raw (first 500 chars):\n{raw[:500]}")
+            # print(f"[END DEBUG]\n")
+            
             # Strip markdown code fences
             raw = re.sub(r"```json|```", "", raw).strip()
 
@@ -154,6 +161,7 @@ def _invoke_json(system: str, user: str, label: str,
         f"Last error: {last_error}"
     )
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Scenario + branch generation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -164,26 +172,43 @@ Each scenario must involve exactly 2 named personas in a tense interpersonal sit
 (e.g. family conflict, workplace dispute, friendship breakdown, romantic tension,
 moral dilemma between strangers).
 
-Return ONLY a JSON array of 5 objects. No markdown. No explanation.
+Return ONLY a raw JSON array. No markdown. No code fences. No explanation.
+The array must contain exactly 5 objects. Each object must have exactly these keys:
 
-Each object must have exactly these keys:
-{
-  "scenario_description": "2-3 sentence setup of the situation",
-  "persona_a": {
-    "name": "Full Name",
-    "age": <integer>,
-    "occupation": "Job title",
-    "personality_traits": ["trait1", "trait2", "trait3", "trait4"],
-    "values": ["value1", "value2", "value3"],
-    "communication_style": "one descriptive phrase",
-    "emotional_triggers": ["trigger1", "trigger2", "trigger3"],
-    "background": "2-3 sentences of life context",
-    "goals": ["goal1 in this situation", "goal2 in this situation"]
-  },
-  "persona_b": { <same structure as persona_a> }
-}
+[
+  {
+    "scenario_description": "2-3 sentence setup string",
+    "persona_a": {
+      "name": "Full Name",
+      "age": 35,
+      "occupation": "Job title",
+      "personality_traits": ["trait1", "trait2", "trait3", "trait4"],
+      "values": ["value1", "value2", "value3"],
+      "communication_style": "one descriptive phrase",
+      "emotional_triggers": ["trigger1", "trigger2", "trigger3"],
+      "background": "2-3 sentences of life context",
+      "goals": ["goal1 in this situation", "goal2 in this situation"]
+    },
+    "persona_b": {
+      "name": "Full Name",
+      "age": 28,
+      "occupation": "Job title",
+      "personality_traits": ["trait1", "trait2", "trait3", "trait4"],
+      "values": ["value1", "value2", "value3"],
+      "communication_style": "one descriptive phrase",
+      "emotional_triggers": ["trigger1", "trigger2", "trigger3"],
+      "background": "2-3 sentences of life context",
+      "goals": ["goal1 in this situation", "goal2 in this situation"]
+    }
+  }
+]
 
-Make scenarios diverse: vary relationship types, cultures, age gaps, conflict types.
+STRICT RULES:
+- All string values must use double quotes.
+- No trailing commas.
+- No comments inside the JSON.
+- Keep every string value on a single line — no line breaks inside strings.
+- Make scenarios diverse: vary relationship types, cultures, age gaps, conflict types.
 """
 
 BRANCH_GEN_SYSTEM = """You are a narrative designer creating decision branches for a human-life simulation.
@@ -192,9 +217,16 @@ Each branch is a single sentence describing a concrete action or choice that Per
 at the start of the interaction.
 
 The 5 branches must vary meaningfully in strategy/tone:
-  e.g. direct/honest, evasive/indirect, aggressive, conciliatory, creative/unexpected.
+  direct/honest, evasive/indirect, aggressive, conciliatory, creative/unexpected.
 
-Return ONLY a JSON array of 5 strings (the branch descriptions). No markdown. No explanation.
+Return ONLY a raw JSON array of exactly 5 strings. No markdown. No code fences. No explanation.
+Example format:
+["Branch one sentence.", "Branch two sentence.", "Branch three sentence.", "Branch four sentence.", "Branch five sentence."]
+
+STRICT RULES:
+- Use double quotes for all strings.
+- No trailing commas.
+- The entire response must be a single JSON array on one or a few lines.
 """
 
 
@@ -221,8 +253,26 @@ def generate_branches(scenario_description: str, persona_a: dict, persona_b: dic
         "Generate 5 distinct decision branches for Persona A."
     )
     data = _invoke_json(system=BRANCH_GEN_SYSTEM, user=user_prompt, label="BranchGen")
-    assert isinstance(data, list) and len(data) == 5, \
-        f"Expected list of 5 branches, got: {type(data)}"
+
+    # ── Normalise whatever shape the model returned ───────────────────────────
+    # Expected: ["str", "str", ...]
+    # Seen:     [["str", "str", ...]]  or  [{"branch": "str"}, ...]
+
+    # Unwrap a single-element outer list wrapping the real list
+    if isinstance(data, list) and len(data) == 1 and isinstance(data[0], list):
+        data = data[0]
+
+    # Convert list-of-dicts to list-of-strings (take the first string value found)
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        data = [
+            next((v for v in item.values() if isinstance(v, str)), str(item))
+            for item in data
+        ]
+
+    # Final guard: ensure every element is a plain string
+    data = [str(item) if not isinstance(item, str) else item for item in data]
+
+    assert len(data) == 5, f"Expected 5 branches, got {len(data)}: {data}"
     return data
 
 
@@ -315,11 +365,11 @@ def main():
             persona_a=raw["persona_a"],
             persona_b=raw["persona_b"],
         )
-        print(f"  ✓ Generated {len(branches)} branches")
+        print(f"   Generated {len(branches)} branches")
         persona_a = build_persona(raw["persona_a"])
         persona_b = build_persona(raw["persona_b"])
         preload_memories([persona_a, persona_b])
-        print(f"  ✓ Memories loaded for {persona_a.name} & {persona_b.name}")
+        print(f"   Memories loaded for {persona_a.name} & {persona_b.name}")
 
         scenario_data.append({
             "index":       idx,
