@@ -18,7 +18,8 @@ def get_observer():
 def get_evaluator():
 
     return ChatOllama(
-        model = "ministral-3:8b-cloud"
+        model = os.getenv("EVALUATOR_MODEL"),
+        temperature = 0.0
     )
 
 if __name__ == "__main__":
