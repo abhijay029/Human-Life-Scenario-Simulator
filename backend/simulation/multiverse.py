@@ -1,32 +1,3 @@
-"""
-Multiverse Engine
-=================
-Runs the same scenario across multiple decision branches in parallel,
-then uses the Observer Agent to score each branch.
-
-Usage
------
-from backend.simulation.multiverse import run_multiverse
-
-results = run_multiverse(
-    personas=[rahul, arjun],
-    scenario="...",
-    decision_branches=[
-        "Arjun is honest and direct.",
-        "Arjun is evasive and avoids the topic.",
-        "Arjun brings a third party mediator.",
-    ],
-    max_turns=6,
-)
-
-Each entry in `results` is:
-{
-    "decision_point": str,
-    "dialogue_log": list[dict],
-    "analysis": dict,          # from Observer Agent
-}
-"""
-
 import concurrent.futures
 from backend.agents.persona import Persona
 from backend.agents.observer import analyse_dialogue
