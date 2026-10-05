@@ -1,12 +1,12 @@
 import os
 import json
-import time
 import re
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from backend.core import llm
-
+from pydantic import BaseModel, Field
+from typing import Literal
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 
 _llm = llm.get_observer()
 
@@ -30,10 +30,36 @@ Rules:
 - outcome_category must be exactly: Best Case, Most Likely, or Worst Case
 - Keep ALL strings under 12 words. Be extremely concise.
 - turn_sentiments: max 2 per speaker, combine if needed
-- key_turning_points: max 2 items
+- key_turning_points: max 2 items, or 
 - recommendations: max 2 items
 - Return the complete JSON in one response"""
 
+class TurnSentiment(BaseModel):
+    turn: int = Field(description = "Index number of the turn. Example: 1 for the first turn, 2 for second turn and so on.")
+    speaker: str = Field(descripeiton = "Name of the speaker that spoke in this turn.")
+    sentiment: Literal["positive", "negative", "neutral"] = Field(description = "Predicted sentiment of this turn's dialogue. This can be 'positive', 'negative' or 'neutral'.")
+    score: float = Field(description = "This is the confidence score of this turn's prediction.")
+    note: str = Field(description = "Reason for this prediction of sentiments in one line.")
+
+class PersonaGoalSuccess(BaseModel):
+    persona: str = Field(description = "Name of the persona.")
+    goal_summary: str = Field(description = "Explaination of the goal of the persna in one line.")
+    success_probability: float = Field(description = "Estimated likelihood of the persona's goal being achieved or fulfilled.")
+    reasoning: str = Field(description = "Explanation for the estimated value of the persona's goal success probability in one line.")
+
+class Observation(BaseModel):
+    turn_sentiments:list[TurnSentiment] = Field(description = "Sentiment analysis details per turn of this branch.")
+    relationship_trajectory: Literal["improving", "stable", "deteriorating"] = Field(description = "The current status and direction of the relationship between the speakers. This value can be 'improving', 'stable', or 'deteriorating'")
+    trajectory_explanation: str = Field(description = "Explanation fo the predicted relationship trajectory in one line.")
+    persona_goal_success: list[PersonaGoalSuccess]
+    outcome_category: Literal["In favor", "disfavor"] = Field(description = "The category of the branch. It can have the following values: " \
+    "'In favor': Means the outcome is in favor of the user." \
+    "'disfavor': Means the outcome is not in favor of the user.")
+    outcome_summary: str = Field(description = "Summary of the outcome of this branch in maximum of 2 sentences.")
+    key_turning_points: list[str] = Field(description = "What in the conversation changed the status of the situation significantly." \
+    "If nothing in perticular then give empty list '[]'.", min_length = 0, max_length = 2)
+    recommendations: list[str] = Field(description = "Advice to the user that will help them better handle the situation. " \
+    "Maximum 2 items allowed.", min_length = 0, max_length = 2)
 
 def _observer_invoke(messages):
         try:
