@@ -65,7 +65,6 @@ async def simulate(req: RunSimulationRequest):
     def _run():
         try:
             personas = [Persona(**p.model_dump()) for p in req.personas]
-
             if req.store_memories:
                 for p in personas:
                     mem = PersonaMemory(p.name)
@@ -97,6 +96,7 @@ async def simulate(req: RunSimulationRequest):
             )
         finally:
             _sim_lock.release()
+            # del mem
 
     try:
         loop = asyncio.get_event_loop()

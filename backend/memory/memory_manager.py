@@ -1,4 +1,6 @@
+import hashlib
 import chromadb
+from chromadb.config import Settings
 import os
 import threading
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -15,7 +17,8 @@ _client_instance = None
 def get_chroma_client():
     global _client_instance
     if _client_instance is None:
-        _client_instance = chromadb.PersistentClient(path="./chroma_store")
+        _client_instance = chromadb.PersistentClient(path="./chroma_store", 
+                                                     settings = Settings(allow_reset = True))
     return _client_instance
 
 class PersonaMemory:
@@ -39,7 +42,7 @@ class PersonaMemory:
             sanitised = f"p_{abs(hash(persona_name)) % 10**8}"
 
         self.collection_name = f"persona_{sanitised}"  # ← correct
-        
+
         with _chroma_lock:
             self.client = get_chroma_client()
             self.collection = self.client.get_or_create_collection(
@@ -51,19 +54,6 @@ class PersonaMemory:
             model="models/gemini-embedding-001",
             google_api_key=os.getenv("GEMINI_API_KEY")
         )
-
-
-        with _chroma_lock:
-            self.client = get_chroma_client()
-            self.collection = self.client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
-
-        # self.embeddings = GoogleGenerativeAIEmbeddings(
-        #     model="models/gemini-embedding-001",
-        #     google_api_key=os.getenv("GEMINI_API_KEY")
-        # )
 
     def store_memories_batch(self, memories: list[str], id_prefix: str):
         """Embed and store all memories in a single API call."""
@@ -107,3 +97,8 @@ class PersonaMemory:
     def count(self):
         with _chroma_lock:
             return self.collection.count()
+
+    # def __del__(self):
+    #     with _chroma_lock:
+    #         self.client = get_chroma_client()
+    #         self.client.reset()
