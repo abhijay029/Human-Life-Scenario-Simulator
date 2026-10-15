@@ -1,5 +1,5 @@
 .env
-.venv/
+.hlss/
 __pycache__/
 chroma_store/
 frontend/node_modules/
