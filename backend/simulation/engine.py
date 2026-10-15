@@ -214,7 +214,7 @@ def should_continue(state: SimulationState) -> str:
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
-def build_simulation_graph(agents: dict[str, PersonaAgent]):
+def build_simulation_graph(agents: dict[str, PersonaAgent], on_event=None):
 
     def select_speaker(state: SimulationState) -> dict:
         # Turn cap reached: skip bidding entirely instead of paying for a round we'd discard
@@ -262,6 +262,13 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
         )
         counts = dict(state["turn_counts"])
         counts[name] = counts.get(name, 0) + 1
+        if on_event:
+            on_event({
+                "type": "dialogue_turn",
+                "turn": state["current_turn"] + 1,
+                "speaker": name,
+                "message": reply,
+            })
         return {
             "dialogue_log": state["dialogue_log"] + [{"speaker": name, "message": reply}],
             "current_turn": state["current_turn"] + 1,
@@ -280,9 +287,16 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
 
 
 def run_simulation(personas: list[Persona], scenario: str,
-                   decision_point: str, max_turns: int = 4) -> list[dict]:
+                   decision_point: str, max_turns: int = 4,
+                   on_event=None) -> list[dict]:
+    """Run a simulation and optionally emit completed dialogue turns.
+
+    ``on_event`` is deliberately called only after a persona has produced a
+    complete response, so existing callers remain unchanged and consumers do
+    not have to assemble partial messages.
+    """
     agents = build_agents(personas)
-    graph = build_simulation_graph(agents)
+    graph = build_simulation_graph(agents, on_event=on_event)
     initial_state: SimulationState = {
         "scenario": scenario,
         "personas": [p.model_dump() for p in personas],

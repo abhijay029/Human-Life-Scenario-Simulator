@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
-import type { PersonaSchema, SimMode, SimulationResponse, MultiverseResponse } from '@/lib/types'
-import { runSimulation, runMultiverse } from '@/lib/api'
+import type { PersonaSchema, SimMode, SimulationResponse, MultiverseResponse, DialogueTurn, SimulationStreamEvent } from '@/lib/types'
+import { streamSimulation, streamMultiverse } from '@/lib/api'
 import CharacterBuilder from '@/components/CharacterBuilder'
 import ScenarioSetup from '@/components/ScenarioSetup'
 import SimulatingScreen from '@/components/SimulatingScreen'
@@ -112,6 +112,8 @@ export default function Home() {
   const [error, setError] = useState('')
   const [singleResult, setSingleResult] = useState<SimulationResponse | undefined>()
   const [multiverseResult, setMultiverseResult] = useState<MultiverseResponse | undefined>()
+  const [liveDialogue, setLiveDialogue] = useState<DialogueTurn[]>([])
+  const [liveBranches, setLiveBranches] = useState<Record<string, DialogueTurn[]>>({})
 
   // Guard against double-invocation (React Strict Mode / double-click)
   const isRunning = useRef(false)
@@ -123,27 +125,52 @@ export default function Home() {
     setError('')
     setLoading(true)
     setStep('running')
+    setLiveDialogue([])
+    setLiveBranches({})
 
     try {
       if (mode === 'single') {
-        const res = await runSimulation({
+        await streamSimulation({
           personas,
           scenario,
           decision_point: decisionPoint,
           max_turns: maxTurns,
           store_memories: true,
+        }, (event: SimulationStreamEvent) => {
+          if (event.type === 'dialogue_turn') {
+            setLiveDialogue((previous) => [
+              ...previous,
+              { speaker: event.speaker, message: event.message },
+            ])
+          }
+          if (event.type === 'completed') {
+            setSingleResult(event.result as SimulationResponse)
+          }
+          if (event.type === 'error') throw new Error(event.message)
         })
-        setSingleResult(res)
         setMultiverseResult(undefined)
       } else {
-        const res = await runMultiverse({
+        await streamMultiverse({
           personas,
           scenario,
           decision_branches: decisionBranches,
           max_turns: maxTurns,
           store_memories: true,
+        }, (event: SimulationStreamEvent) => {
+          if (event.type === 'dialogue_turn' && event.branch_id) {
+            setLiveBranches((previous) => ({
+              ...previous,
+              [event.branch_id!]: [
+                ...(previous[event.branch_id!] ?? []),
+                { speaker: event.speaker, message: event.message },
+              ],
+            }))
+          }
+          if (event.type === 'completed') {
+            setMultiverseResult(event.result as MultiverseResponse)
+          }
+          if (event.type === 'error') throw new Error(event.message)
         })
-        setMultiverseResult(res)
         setSingleResult(undefined)
       }
       setStep('results')
@@ -161,6 +188,8 @@ export default function Home() {
     setStep('build')
     setSingleResult(undefined)
     setMultiverseResult(undefined)
+    setLiveDialogue([])
+    setLiveBranches({})
     setError('')
     isRunning.current = false
   }
@@ -196,7 +225,14 @@ export default function Home() {
 
       {/* Main content */}
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {step === 'running' && <SimulatingScreen mode={mode} />}
+        {step === 'running' && (
+          <SimulatingScreen
+            mode={mode}
+            decisionPoint={mode === 'single' ? decisionPoint : scenario}
+            liveDialogue={liveDialogue}
+            liveBranches={liveBranches}
+          />
+        )}
 
         {step === 'build' && (
           <CharacterBuilder

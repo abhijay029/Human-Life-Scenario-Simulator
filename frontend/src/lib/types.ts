@@ -71,6 +71,15 @@ export interface MultiverseResponse {
   comparison_report: ComparisonReport
 }
 
+export type SimulationStreamEvent =
+  | { type: 'simulation_started' }
+  | { type: 'status'; message: string }
+  | { type: 'branch_started' | 'branch_completed'; branch_id: string; branch_label: string }
+  | { type: 'branch_failed'; branch_id: string; branch_label: string; message: string }
+  | { type: 'dialogue_turn'; turn: number; speaker: string; message: string; branch_id?: string; branch_label?: string }
+  | { type: 'completed'; result: SimulationResponse | MultiverseResponse }
+  | { type: 'error'; message: string }
+
 // ── Character Builder ──────────────────────────────────────────────────────
 export interface BuildPersonaResponse {
   persona: PersonaSchema
