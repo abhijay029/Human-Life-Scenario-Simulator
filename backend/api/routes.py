@@ -8,8 +8,10 @@ import os
 import json
 import asyncio
 import threading
+from queue import Empty, Queue
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -43,6 +45,31 @@ _llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
 )
+
+
+def _sse(event: dict) -> str:
+    """Encode one JSON event using the SSE wire format."""
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+async def _event_stream(events: Queue):
+    """Read blocking worker events without blocking FastAPI's event loop."""
+    while True:
+        def get_event():
+            try:
+                return events.get(timeout=15)
+            except Empty:
+                return {"type": "heartbeat"}
+
+        event = await asyncio.to_thread(get_event)
+        if event is None:
+            break
+        if event.get("type") == "heartbeat":
+            # Keep proxies and browsers from closing an otherwise healthy stream.
+            yield ": keep-alive\n\n"
+            continue
+
+        yield _sse(event)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -161,6 +188,132 @@ async def multiverse(req: RunMultiverseRequest):
     except Exception as exc:
         _sim_lock.release()
         raise HTTPException(status_code=500, detail=f"Multiverse failed: {exc}")
+
+
+# ── Streaming simulation endpoints ──────────────────────────────────────────
+
+@router.post("/simulate/stream")
+async def simulate_stream(req: RunSimulationRequest):
+    """Stream completed persona turns while a single simulation is running."""
+    if not _sim_lock.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="A simulation is already running. Please wait for it to finish.")
+
+    events = Queue()
+    personas = [Persona(**p.model_dump()) for p in req.personas]
+
+    def worker():
+        try:
+            events.put({"type": "simulation_started"})
+            if req.store_memories:
+                for persona in personas:
+                    mem = PersonaMemory(persona.name)
+                    if mem.count() == 0:
+                        mem.store_persona_facts(persona)
+
+            dialogue_log = run_simulation(
+                personas=personas,
+                scenario=req.scenario,
+                decision_point=req.decision_point,
+                max_turns=req.max_turns,
+                on_event=events.put,
+            )
+
+            events.put({"type": "status", "message": "Observer analysing outcomes"})
+            try:
+                analysis = analyse_dialogue(
+                    dialogue_log=dialogue_log,
+                    scenario=req.scenario,
+                    decision_point=req.decision_point,
+                    personas=[p.model_dump() for p in personas],
+                )
+            except Exception:
+                analysis = None
+
+            result = SimulationResponse(
+                scenario=req.scenario,
+                decision_point=req.decision_point,
+                dialogue_log=dialogue_log,
+                analysis=analysis,
+            )
+            events.put({"type": "completed", "result": result.model_dump()})
+        except Exception as exc:
+            events.put({"type": "error", "message": str(exc)})
+        finally:
+            _sim_lock.release()
+            events.put(None)
+
+    try:
+        _executor.submit(worker)
+    except Exception:
+        _sim_lock.release()
+        raise
+
+    return StreamingResponse(
+        _event_stream(events),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/multiverse/stream")
+async def multiverse_stream(req: RunMultiverseRequest):
+    """Stream turns and lifecycle events for each sequential multiverse branch."""
+    if not _sim_lock.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="A simulation is already running. Please wait for it to finish.")
+
+    events = Queue()
+    personas = [Persona(**p.model_dump()) for p in req.personas]
+
+    def worker():
+        try:
+            events.put({"type": "simulation_started"})
+            if req.store_memories:
+                for persona in personas:
+                    mem = PersonaMemory(persona.name)
+                    if mem.count() == 0:
+                        mem.store_persona_facts(persona)
+
+            results = run_multiverse(
+                personas=personas,
+                scenario=req.scenario,
+                decision_branches=req.decision_branches,
+                max_turns=req.max_turns,
+                on_event=events.put,
+            )
+            events.put({"type": "status", "message": "Generating comparison report"})
+
+            branches = [
+                SimulationResponse(
+                    scenario=req.scenario,
+                    decision_point=result["decision_point"],
+                    dialogue_log=result["dialogue_log"],
+                    analysis=result.get("analysis"),
+                )
+                for result in results
+            ]
+            response = MultiverseResponse(
+                scenario=req.scenario,
+                branches=branches,
+                comparison_report=generate_comparison_report(results),
+            )
+            events.put({"type": "completed", "result": response.model_dump()})
+        except Exception as exc:
+            events.put({"type": "error", "message": str(exc)})
+        finally:
+            _sim_lock.release()
+            events.put(None)
+
+    try:
+        _executor.submit(worker)
+    except Exception:
+        _sim_lock.release()
+        raise
+
+    return StreamingResponse(
+        _event_stream(events),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Character Builder ─────────────────────────────────────────────────────────

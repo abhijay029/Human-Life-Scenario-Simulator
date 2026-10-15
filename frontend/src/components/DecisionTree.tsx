@@ -147,9 +147,12 @@ function buildGraph(
     const x = startX - totalWidth / 2 + i * BRANCH_SPACING
     const branchId = `branch-${i}`
 
-    const avgProb =
-      branch.analysis?.persona_goal_success?.reduce((s, p) => s + p.success_probability, 0) /
-        (branch.analysis?.persona_goal_success?.length || 1) || undefined
+    // Normalize the optional analysis array before reducing it so strict
+    // TypeScript does not have to narrow the same optional chain twice.
+    const goalSuccess = branch.analysis?.persona_goal_success ?? []
+    const avgProb = goalSuccess.length
+      ? goalSuccess.reduce((s, p) => s + p.success_probability, 0) / goalSuccess.length
+      : undefined
 
     const isBest = branch.decision_point === bestDp
     const isWorst = branch.decision_point === worstDp
