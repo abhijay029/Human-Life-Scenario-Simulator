@@ -34,6 +34,7 @@ httptools==0.8.0
 httpx==0.28.1
 httpx2==2.13.0
 huggingface_hub==1.32.0
+sentence-transformers==5.2.0
 idna==3.20
 importlib_resources==7.1.0
 jsonpatch==1.33

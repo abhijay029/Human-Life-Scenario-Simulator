@@ -3,7 +3,7 @@ import chromadb
 from chromadb.config import Settings
 import os
 import threading
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 import re
 import unicodedata
@@ -13,6 +13,39 @@ load_dotenv()
 # One lock to serialize all ChromaDB access across threads
 _chroma_lock = threading.Lock()
 _client_instance = None
+_embedding_model = None
+_embedding_model_lock = threading.Lock()
+_embedding_encode_lock = threading.Lock()
+
+
+def get_embedding_model():
+    """Load the local SentenceTransformer once per process."""
+    global _embedding_model
+    if _embedding_model is None:
+        with _embedding_model_lock:
+            if _embedding_model is None:
+                model_name = os.getenv("SENTENCE_TRANSFORMER_MODEL", "all-MiniLM-L6-v2")
+                _embedding_model = SentenceTransformer(model_name)
+    return _embedding_model
+
+
+class SentenceTransformerEmbeddings:
+    """Adapter exposing the embedding methods used by PersonaMemory."""
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        with _embedding_encode_lock:
+            vectors = get_embedding_model().encode(
+                texts,
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+        return vectors.tolist()
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.embed_documents([text])[0]
 
 def get_chroma_client():
     global _client_instance
@@ -41,7 +74,11 @@ class PersonaMemory:
         if len(sanitised) < 3:
             sanitised = f"p_{abs(hash(persona_name)) % 10**8}"
 
-        self.collection_name = f"persona_{sanitised}"  # ← correct
+        # Keep SentenceTransformer vectors separate from existing Gemini
+        # vectors, whose dimensions are incompatible with this model.
+        model_name = os.getenv("SENTENCE_TRANSFORMER_MODEL", "all-MiniLM-L6-v2")
+        model_suffix = hashlib.sha1(model_name.encode("utf-8")).hexdigest()[:10]
+        self.collection_name = f"persona_{sanitised[:41]}_st_{model_suffix}"
 
         with _chroma_lock:
             self.client = get_chroma_client()
@@ -50,13 +87,10 @@ class PersonaMemory:
                 metadata={"hnsw:space": "cosine"}
             )
 
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001",
-            google_api_key=os.getenv("GEMINI_API_KEY")
-        )
+        self.embeddings = SentenceTransformerEmbeddings()
 
     def store_memories_batch(self, memories: list[str], id_prefix: str):
-        """Embed and store all memories in a single API call."""
+        """Embed and store all memories in one local model call."""
         vectors = self.embeddings.embed_documents(memories)
         ids = [f"{id_prefix}_{i}" for i in range(len(memories))]
         with _chroma_lock:
