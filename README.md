@@ -24,7 +24,7 @@ FastAPI (main.py)
         +-- /multiverse       -> sequential branches -> comparison report
         |
         +-- Ollama engine/observer/evaluator models
-        +-- Gemini Embedding 001 -> local ChromaDB (./chroma_store)
+        +-- SentenceTransformer -> local ChromaDB (./chroma_store)
 ```
 
 The normal request path is:
@@ -55,7 +55,7 @@ The normal request path is:
 | `backend/core/__init__.py` | Package marker for shared backend services. |
 | `backend/core/llm.py` | Centralises three `ChatOllama` factories: `get_engine()`, `get_observer()`, and `get_evaluator()`. Model names come from `ENGINE_MODEL`, `OBSERVER_MODEL`, and `EVALUATOR_MODEL`. This is separate from the Gemini model instantiated directly in `routes.py` for persona extraction. |
 | `backend/memory/__init__.py` | Package marker for memory services. |
-| `backend/memory/memory_manager.py` | Provides thread-safe persistent ChromaDB memory. Each persona gets a sanitised collection name (`persona_<name>`). Persona facts are embedded in one batch with Gemini `models/gemini-embedding-001`; runtime recall embeds a query and retrieves nearest memories using cosine distance. A process-wide lock serialises local-store access. |
+| `backend/memory/memory_manager.py` | Provides thread-safe persistent ChromaDB memory. Persona facts and runtime recall queries are embedded locally with the configurable SentenceTransformer model (`SENTENCE_TRANSFORMER_MODEL`, default `all-MiniLM-L6-v2`) and retrieved using cosine distance. Collections include a model-specific suffix so existing Gemini-vector collections are not queried with incompatible dimensions. A process-wide lock serialises local-store access. |
 | `backend/simulation/__init__.py` | Package marker for simulation services. |
 | `backend/simulation/engine.py` | Core dialogue engine. It defines `Bid`, `SimulationState`, bid/speaking prompts, `PersonaAgent`, scoring rules, and a compiled LangGraph. Bids run in parallel (maximum four concurrent calls), but the selected speaker is not the previous speaker. A name mention bypasses a bid LLM call and gives that persona urgency. Speaking sees the last two messages plus one recalled memory. Bid and speaking chains retry failures; bid failures fall back to urgency 2. The graph always permits a first utterance, then stops below `SPEAK_THRESHOLD` or at `max_turns`. Early exchanges are written back to memory only for the first few turns to reduce embedding traffic. |
 | `backend/simulation/multiverse.py` | Runs each decision branch with the same personas and scenario. Despite importing concurrency support and accepting `max_workers`, the current implementation loops sequentially to protect free-tier limits and local ChromaDB. Each branch is analysed, failures are retained as error records, and successful branches are sorted by average goal-success probability. |
@@ -67,9 +67,9 @@ The normal request path is:
 |---|---|
 | `main.py` | Creates FastAPI, enables CORS for `localhost:3000` and `127.0.0.1:3000`, and includes the API router. Uvicorn starts the server. |
 | `clean_chromadb.py` | Opens persistent ChromaDB with reset enabled and calls `client.reset()`. This destructively clears local persona/conversation memories. |
-| `.env` | Local configuration for `GEMINI_API_KEY`, `GEMINI_MODEL`, `ENGINE_MODEL`, `OBSERVER_MODEL`, `EVALUATOR_MODEL`, `OLLAMA_BASE_URL`, and `CURRENT_MODEL`. It is ignored by Git; never commit keys. |
+| `.env` | Local configuration for `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTENCE_TRANSFORMER_MODEL`, `ENGINE_MODEL`, `OBSERVER_MODEL`, `EVALUATOR_MODEL`, `OLLAMA_BASE_URL`, and `CURRENT_MODEL`. It is ignored by Git; never commit keys. |
 | `.gitignore` | Excludes secrets, `.hlss`, Python caches, ChromaDB, frontend dependencies/build output, notebooks, and other local/generated files. |
-| `requirements.txt` | Pinned Python dependencies for FastAPI/Uvicorn, Pydantic, LangChain/LangGraph, Ollama, Gemini integrations, and ChromaDB. |
+| `requirements.txt` | Pinned Python dependencies for FastAPI/Uvicorn, Pydantic, LangChain/LangGraph, Ollama, Gemini character extraction, SentenceTransformer embeddings, and ChromaDB. |
 
 ### Frontend application
 
@@ -146,13 +146,14 @@ Interactive OpenAPI documentation is available at `http://localhost:8000/docs` a
 
 ## Setup and running
 
-Requirements: Python with the pinned dependencies, Ollama running with the models named by `ENGINE_MODEL`, `OBSERVER_MODEL`, and `EVALUATOR_MODEL`, a Gemini API key for persona extraction/embeddings, and Node.js/npm.
+Requirements: Python with the pinned dependencies, Ollama running with the models named by `ENGINE_MODEL`, `OBSERVER_MODEL`, and `EVALUATOR_MODEL`, a Gemini API key for persona extraction, and Node.js/npm. Embeddings run locally with SentenceTransformers; the first run downloads the configured model from Hugging Face.
 
 Create `.env` in the repository root:
 
 ```dotenv
 GEMINI_API_KEY=your_key
 GEMINI_MODEL=gemini-2.5-flash
+SENTENCE_TRANSFORMER_MODEL=all-MiniLM-L6-v2
 ENGINE_MODEL=your_ollama_engine_model
 OBSERVER_MODEL=your_ollama_observer_model
 EVALUATOR_MODEL=your_ollama_evaluator_model
@@ -223,7 +224,7 @@ These scripts perform real model and embedding calls; they do not use mocks.
 | LLM chains | LangChain prompts, parsers, retries, and Ollama integration |
 | Engine/Observer/Evaluator provider | Ollama via `ChatOllama` |
 | Character-builder provider | Gemini via `ChatGoogleGenerativeAI` |
-| Embeddings | Gemini Embedding 001 |
+| Embeddings | SentenceTransformers (`all-MiniLM-L6-v2` by default) |
 | Vector memory | Persistent local ChromaDB |
 | Frontend | Next.js 14 App Router, React 18, TypeScript |
 | Visualisation | React Flow |
