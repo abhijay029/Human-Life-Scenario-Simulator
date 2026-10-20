@@ -1,4 +1,5 @@
 import re
+import threading
 from typing import TypedDict, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -13,11 +14,11 @@ from backend.memory.memory_manager import PersonaMemory
 from backend.core import llm
 
 # ── Tuning knobs ──────────────────────────────────────────────────────────────
-SPEAK_THRESHOLD = 4.0             # best score below this -> nobody wants to talk -> simulation ends
+SPEAK_THRESHOLD = 0.5             # only true silence (urgency 0) ends the dialogue early
 ADDRESSED_BONUS = 3.0             # added when the last message mentions the persona by name
-REPEAT_PENALTY = 0.5              # subtracted per turn the persona has already taken
+REPEAT_PENALTY = 0.2              # mild penalty to encourage alternating speakers in group settings
 ADDRESSED_URGENCY = 7             # urgency assigned (without an LLM call) when addressed by name
-FALLBACK_URGENCY = 2              # urgency used if a bid still fails after all retries
+FALLBACK_URGENCY = 5              # sensible moderate urgency if an LLM bid output is unparseable
 FAILED_BID_REASON = "Bid failed"
 HISTORY_WINDOW = 2                # how many recent messages each persona sees
 MAX_PARALLEL_BIDS = 4             # cap concurrent bid calls to stay inside API quota
@@ -51,6 +52,7 @@ class SimulationState(TypedDict):
     next_speaker: Optional[str]      # None -> nobody wants to speak
     last_speaker: Optional[str]
     turn_counts: dict[str, int]
+    session_id: Optional[str]        # observer pipeline key (None = observer disabled)
 
 
 # ── Prompts (plain variables only — no expressions inside braces) ─────────────
@@ -250,8 +252,13 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
 
         best_name, best_score = max(scores.items(), key=lambda kv: kv[1])
 
-        # The very first utterance is always made, so the simulation is never empty
-        threshold = 0.0 if not log else SPEAK_THRESHOLD
+        # The very first utterance is always made; for 2-person dialogues keep alternating
+        # as long as the other party has not explicitly bid 0 urgency (silence/exit)
+        if not log or (len(agents) == 2 and bids[best_name].urgency > 0):
+            threshold = 0.0
+        else:
+            threshold = SPEAK_THRESHOLD
+
         return {"next_speaker": best_name if best_score >= threshold else None}
 
     def speak(state: SimulationState) -> dict:
@@ -262,8 +269,38 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
         )
         counts = dict(state["turn_counts"])
         counts[name] = counts.get(name, 0) + 1
+
+        new_log = state["dialogue_log"] + [{"speaker": name, "message": reply}]
+
+        # ── Observer hook (non-blocking) ──────────────────────────────────────
+        # Only the public transcript (speaker name + message) is passed.
+        # No access to private persona memory, knowledge profiles, or system prompts.
+        session_id = state.get("session_id")
+        if session_id:
+            try:
+                from backend.observer.pipeline import get_pipeline
+                from backend.observer.schemas import TurnEvent
+                all_names = list(agents.keys())
+                listeners = [n for n in all_names if n != name]
+                event = TurnEvent(
+                    session_id=session_id,
+                    turn_index=state["current_turn"],
+                    speaker=name,
+                    listeners=listeners,
+                    message=reply,
+                    runtime="simulation",
+                )
+                get_pipeline().emit_turn_sync(event)
+            except Exception as _obs_exc:
+                # Observer errors must never block or crash the simulation
+                import logging as _log
+                _log.getLogger(__name__).warning(
+                    "Observer emit failed (non-fatal): %s", _obs_exc
+                )
+        # ──────────────────────────────────────────────────────────────────────
+
         return {
-            "dialogue_log": state["dialogue_log"] + [{"speaker": name, "message": reply}],
+            "dialogue_log": new_log,
             "current_turn": state["current_turn"] + 1,
             "last_speaker": name,
             "turn_counts": counts,
@@ -279,9 +316,37 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
     return graph.compile()
 
 
-def run_simulation(personas: list[Persona], scenario: str,
-                   decision_point: str, max_turns: int = 4) -> list[dict]:
+def run_simulation(
+    personas: list[Persona],
+    scenario: str,
+    decision_point: str,
+    max_turns: int = 4,
+    session_id: Optional[str] = None,
+) -> list[dict]:
+    """
+    Run a full simulation. If session_id is provided, the observer pipeline
+    will be auto-started and finalization will be triggered on completion.
+    """
     agents = build_agents(personas)
+
+    # Register and start observer pipeline for this session
+    if session_id:
+        try:
+            from backend.observer.pipeline import get_pipeline
+            pipeline = get_pipeline()
+            participant_names = [p.name for p in personas]
+            pipeline.get_or_create_session(
+                session_id,
+                participants=participant_names,
+                scenario_description=scenario,
+            )
+            pipeline.start_worker(session_id)
+        except Exception as _obs_exc:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "Observer pipeline setup failed (non-fatal): %s", _obs_exc
+            )
+
     graph = build_simulation_graph(agents)
     initial_state: SimulationState = {
         "scenario": scenario,
@@ -293,6 +358,19 @@ def run_simulation(personas: list[Persona], scenario: str,
         "next_speaker": None,
         "last_speaker": None,
         "turn_counts": {},
+        "session_id": session_id,
     }
     final_state = graph.invoke(initial_state)
+
+    # Trigger observer finalization (non-blocking sentinel enqueue)
+    if session_id:
+        try:
+            from backend.observer.pipeline import get_pipeline
+            get_pipeline().finalize_session_sync(session_id)
+        except Exception as _obs_exc:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "Observer finalize failed (non-fatal): %s", _obs_exc
+            )
+
     return final_state["dialogue_log"]

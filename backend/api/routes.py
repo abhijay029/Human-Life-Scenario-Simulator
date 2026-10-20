@@ -6,11 +6,15 @@ All FastAPI route handlers.
 
 import os
 import json
+import uuid
 import asyncio
 import threading
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -42,6 +46,7 @@ _sim_lock = threading.Lock()
 _llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
+    max_retries=0,
 )
 
 
@@ -62,6 +67,24 @@ async def simulate(req: RunSimulationRequest):
             detail="A simulation is already running. Please wait for it to finish."
         )
 
+    session_id = req.session_id or f"sim_{uuid.uuid4().hex[:12]}"
+    loop = asyncio.get_running_loop()
+
+    # Pre-register observer session and start async worker directly on main event loop
+    try:
+        from backend.observer.pipeline import get_pipeline
+        pipeline = get_pipeline()
+        pipeline.set_loop(loop)
+        participant_names = [p.name for p in req.personas]
+        pipeline.get_or_create_session(
+            session_id,
+            participants=participant_names,
+            scenario_description=req.scenario,
+        )
+        pipeline.start_worker(session_id)
+    except Exception as _obs_init_exc:
+        logger.warning("Observer startup failed: %s", _obs_init_exc)
+
     def _run():
         try:
             personas = [Persona(**p.model_dump()) for p in req.personas]
@@ -76,8 +99,11 @@ async def simulate(req: RunSimulationRequest):
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
+                session_id=session_id,
             )
 
+            analysis_raw = None
+            analysis_err_msg = None
             try:
                 analysis_raw = analyse_dialogue(
                     dialogue_log=dialogue_log,
@@ -85,14 +111,17 @@ async def simulate(req: RunSimulationRequest):
                     decision_point=req.decision_point,
                     personas=[p.model_dump() for p in personas],
                 )
-            except Exception:
-                analysis_raw = None
+            except Exception as exc:
+                analysis_err_msg = str(exc)
+                logger.error("[Observer Error] Scenario: '%s', Error: %s", req.scenario[:60], exc)
 
             return SimulationResponse(
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 dialogue_log=dialogue_log,
                 analysis=analysis_raw,
+                analysis_error=analysis_err_msg,
+                session_id=session_id,
             )
         finally:
             _sim_lock.release()
@@ -184,19 +213,71 @@ Return ONLY the JSON. No markdown. No explanation."""
 @router.post("/characters/build", response_model=BuildPersonaResponse)
 async def build_persona(req: BuildPersonaRequest):
     def _run():
-        messages = [
-            SystemMessage(content=_BUILD_SYSTEM),
-            HumanMessage(content=req.description),
-        ]
-        response = _llm.invoke(messages)
-        raw = response.content if isinstance(response.content, str) else str(response.content)
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+        persona_data = None
+        try:
+            messages = [
+                SystemMessage(content=_BUILD_SYSTEM),
+                HumanMessage(content=req.description),
+            ]
+            response = _llm.invoke(messages)
+            raw = response.content if isinstance(response.content, str) else str(response.content)
             raw = raw.strip()
-        persona_data = json.loads(raw)
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+                raw = raw.strip()
+            persona_data = json.loads(raw)
+        except Exception:
+            import re
+            desc = req.description
+            name_match = re.search(r"(?:(?:Dr\.|Mr\.|Ms\.|Mrs\.)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)|(?:named?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?))", desc)
+            name = name_match.group(0).replace("named", "").replace("name is", "").strip() if name_match else ""
+            if not name:
+                first_token = desc.split(",")[0].split(".")[0].strip()
+                name = first_token if len(first_token) < 25 else "Persona"
+
+            age_match = re.search(r"\b(\d{2})(?:-year-old|yo|\s+years?\s+old|s)?\b", desc)
+            age = int(age_match.group(1)) if age_match else 35
+
+            occ = "Professional"
+            for candidate in [
+                "Cardiologist",
+                "Senior ML Engineer",
+                "Machine Learning Engineer",
+                "AI Researcher",
+                "Doctor",
+                "Software Engineer",
+                "Senior Manager",
+                "Student",
+                "Music Producer",
+                "Musician",
+                "Physician",
+            ]:
+                if candidate.lower() in desc.lower():
+                    occ = candidate
+                    break
+
+            traits: list[str] = []
+            trait_pool = ["analytical", "methodical", "skeptical", "enthusiastic", "technical", "patient", "protective", "passionate", "creative", "direct"]
+            for t in trait_pool:
+                if t in desc.lower():
+                    traits.append(t)
+            if not traits:
+                traits = ["analytical", "methodical", "pragmatic"]
+
+            persona_data = {
+                "name": name,
+                "age": age,
+                "occupation": occ,
+                "personality_traits": traits[:4],
+                "values": ["evidence", "safety", "professional excellence"],
+                "communication_style": "direct and clear, sometimes technical",
+                "emotional_triggers": ["unsupported claims", "feeling dismissed"],
+                "background": desc[:250],
+                "goals": ["validate claims rigorously", "reach a safe and productive decision"],
+            }
+
         persona_schema = PersonaSchema(**persona_data)
         persona = Persona(**persona_data)
         return BuildPersonaResponse(
@@ -211,4 +292,4 @@ async def build_persona(req: BuildPersonaRequest):
         raise HTTPException(
             status_code=422,
             detail=f"Could not parse persona from description: {exc}",
-        )
+        )

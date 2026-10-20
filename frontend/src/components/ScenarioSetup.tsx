@@ -3,6 +3,13 @@ import { useState } from 'react'
 import type { PersonaSchema, SimMode } from '@/lib/types'
 import { Panel, Button, Textarea, Input, Badge, Divider } from './ui'
 import { GitBranch, Zap, Plus, Trash2 } from 'lucide-react'
+import type { Tone } from '@/lib/knowledgeLimiterApi'
+
+const TONES: { value: Tone; label: string; hint: string }[] = [
+  { value: 'casual', label: 'Casual', hint: 'Everyday, conversational' },
+  { value: 'discussion', label: 'Discussion', hint: 'Balanced depth' },
+  { value: 'debate', label: 'Debate', hint: 'Contested viewpoints' },
+]
 
 export default function ScenarioSetup({
   personas,
@@ -14,11 +21,10 @@ export default function ScenarioSetup({
   onDecisionPointChange,
   decisionBranches,
   onDecisionBranchesChange,
-  maxTurns,
-  onMaxTurnsChange,
+  tone,
+  onToneChange,
   onBack,
-  onRun,
-  loading,
+  onNext,
 }: {
   personas: PersonaSchema[]
   mode: SimMode
@@ -29,11 +35,10 @@ export default function ScenarioSetup({
   onDecisionPointChange: (s: string) => void
   decisionBranches: string[]
   onDecisionBranchesChange: (b: string[]) => void
-  maxTurns: number
-  onMaxTurnsChange: (n: number) => void
+  tone: Tone
+  onToneChange: (t: Tone) => void
   onBack: () => void
-  onRun: () => void
-  loading: boolean
+  onNext: () => void
 }) {
   const [newBranch, setNewBranch] = useState('')
 
@@ -190,26 +195,29 @@ export default function ScenarioSetup({
 
       <Divider />
 
-      {/* Max turns */}
-      <div className="flex items-center justify-between">
+      {/* Conversation tone — shapes which topics get suggested in the next step */}
+      <div className="space-y-3">
         <div>
-          <p className="text-xs font-mono text-text-secondary">Max Dialogue Turns</p>
-          <p className="text-[10px] text-text-dim">Fewer turns = faster results (2–8 recommended)</p>
+          <p className="text-xs font-mono text-text-secondary">Conversation Tone</p>
+          <p className="text-[10px] text-text-dim">
+            Used to suggest topics and expertise levels on the next screen.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onMaxTurnsChange(Math.max(2, maxTurns - 1))}
-            className="w-7 h-7 panel flex items-center justify-center text-text-secondary hover:text-cyan transition-colors font-mono"
-          >
-            −
-          </button>
-          <span className="w-8 text-center font-mono text-cyan text-sm">{maxTurns}</span>
-          <button
-            onClick={() => onMaxTurnsChange(Math.min(10, maxTurns + 1))}
-            className="w-7 h-7 panel flex items-center justify-center text-text-secondary hover:text-cyan transition-colors font-mono"
-          >
-            +
-          </button>
+        <div className="grid grid-cols-3 gap-3">
+          {TONES.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => onToneChange(t.value)}
+              className={`panel p-3 text-left transition-all duration-200 ${
+                tone === t.value
+                  ? 'border-cyan/50 shadow-[0_0_16px_rgba(0,229,255,0.12)]'
+                  : 'hover:border-border/80'
+              }`}
+            >
+              <span className="font-mono text-sm font-bold text-text-primary">{t.label}</span>
+              <p className="text-[10px] text-text-secondary mt-1">{t.hint}</p>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -218,14 +226,8 @@ export default function ScenarioSetup({
         <Button variant="ghost" onClick={onBack}>
           ← Back
         </Button>
-        <Button
-          variant="primary"
-          onClick={onRun}
-          disabled={!isValid || loading}
-          loading={loading}
-          className="px-8"
-        >
-          {loading ? 'Simulating…' : `Run ${mode === 'multiverse' ? 'Multiverse' : 'Simulation'} →`}
+        <Button variant="primary" onClick={onNext} disabled={!isValid} className="px-8">
+          Next: Knowledge Profiles →
         </Button>
       </div>
     </div>

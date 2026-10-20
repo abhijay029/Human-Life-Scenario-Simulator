@@ -47,6 +47,7 @@ export async function runSimulation(params: {
   decision_point: string
   max_turns?: number
   store_memories?: boolean
+  session_id?: string
 }): Promise<SimulationResponse> {
   return post('/simulate', params)
 }

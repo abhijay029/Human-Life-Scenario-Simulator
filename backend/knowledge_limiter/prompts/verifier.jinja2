@@ -1,0 +1,17 @@
+You are verifying whether a persona's reply is consistent with their knowledge profile.
+
+Persona: {{ persona.name }}, {{ persona.profession }}
+Knowledge levels: {{ knowledge_summary }}
+
+Reply to verify:
+{{ reply }}
+
+The last message in conversation (for context):
+{{ last_message }}
+
+Does the reply contain any claim, fact, or vocabulary that this persona COULD NOT plausibly know given their knowledge levels?
+Allow: asking questions about unknown terms, parroting back a term the other speaker just used while asking what it means, speaking about their OWN domain at expert level.
+Flag: independently explaining technical concepts outside their domain, using jargon from outside their domain without confusion, stating specific technical facts outside their domain.
+
+Return JSON: {"violation": true|false, "span": "<the offending phrase, or empty string>", "reason": "<why it violates, or empty>"}
+Return ONLY the JSON.

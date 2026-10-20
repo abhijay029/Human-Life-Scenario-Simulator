@@ -1,6 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import type { SimMode } from '@/lib/types'
+import { useObserverStream } from '@/lib/useObserverStream'
+import { Activity, Wifi, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { clsx } from 'clsx'
 
 const SINGLE_STEPS = [
   'Initialising persona agents…',
@@ -24,10 +27,17 @@ const MULTI_STEPS = [
   'Generating comparison report…',
 ]
 
-export default function SimulatingScreen({ mode }: { mode: SimMode }) {
+export default function SimulatingScreen({
+  mode,
+  sessionId,
+}: {
+  mode: SimMode
+  sessionId?: string
+}) {
   const steps = mode === 'multiverse' ? MULTI_STEPS : SINGLE_STEPS
   const [currentStep, setCurrentStep] = useState(0)
   const [dots, setDots] = useState('.')
+  const observer = useObserverStream(sessionId ?? null)
 
   useEffect(() => {
     const stepInterval = setInterval(() => {
@@ -43,19 +53,27 @@ export default function SimulatingScreen({ mode }: { mode: SimMode }) {
     return () => clearInterval(dotInterval)
   }, [])
 
+  const latestObs = observer.observations.length > 0
+    ? observer.observations[observer.observations.length - 1]
+    : null
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 max-w-xl mx-auto px-4">
       {/* Animated core */}
-      <div className="relative w-24 h-24">
+      <div className="relative w-20 h-20">
         {/* Outer ring */}
-        <div className="absolute inset-0 rounded-full border-2 border-cyan/20 animate-spin"
-             style={{ animationDuration: '3s' }} />
+        <div
+          className="absolute inset-0 rounded-full border-2 border-cyan/20 animate-spin"
+          style={{ animationDuration: '3s' }}
+        />
         {/* Inner ring */}
-        <div className="absolute inset-3 rounded-full border border-cyan/40 animate-spin"
-             style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+        <div
+          className="absolute inset-2.5 rounded-full border border-cyan/40 animate-spin"
+          style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}
+        />
         {/* Core dot */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full bg-cyan/20 border border-cyan/60 neon-pulse" />
+          <div className="w-5 h-5 rounded-full bg-cyan/20 border border-cyan/60 neon-pulse" />
         </div>
       </div>
 
@@ -66,9 +84,59 @@ export default function SimulatingScreen({ mode }: { mode: SimMode }) {
           {dots}
         </p>
         <p className="text-xs font-mono text-text-secondary tracking-wide">
-          This may take 1–3 minutes due to API rate limits
+          Personas are deliberating. Observer Agent evaluates each turn in real time.
         </p>
       </div>
+
+      {/* Live Observer Real-Time Stream Card (if observations are arriving) */}
+      {latestObs && (
+        <div className="w-full bg-zinc-950 border border-cyan/30 rounded-lg p-4 shadow-lg stagger-child">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2">
+            <div className="flex items-center gap-2">
+              <Activity size={13} className="text-cyan animate-pulse" />
+              <span className="text-xs font-mono font-bold text-cyan tracking-wider uppercase">
+                Live Observer Telemetry — Turn {latestObs.turn_index + 1}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400">
+              <Wifi size={10} className="text-green-400 animate-pulse" />
+              <span>Streaming</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-mono font-bold text-zinc-200">{latestObs.speaker}:</span>
+              <span
+                className={clsx(
+                  'font-mono px-1.5 py-0.5 rounded text-[10px]',
+                  latestObs.sentiment === 'positive' && 'bg-green-500/10 text-green-400 border border-green-500/20',
+                  latestObs.sentiment === 'negative' && 'bg-red-500/10 text-red-400 border border-red-500/20',
+                  latestObs.sentiment === 'neutral' && 'bg-zinc-800 text-zinc-400'
+                )}
+              >
+                {latestObs.sentiment} ({latestObs.sentiment_score > 0 ? '+' : ''}{latestObs.sentiment_score.toFixed(2)})
+              </span>
+            </div>
+
+            {latestObs.key_event && (
+              <p className="text-xs text-amber-400 font-body italic">
+                ⚡ {latestObs.key_event}
+              </p>
+            )}
+
+            {latestObs.emotion_labels?.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {latestObs.emotion_labels.map((e) => (
+                  <span key={e} className="text-[9px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
+                    {e}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Step log */}
       <div className="w-full max-w-sm space-y-2">

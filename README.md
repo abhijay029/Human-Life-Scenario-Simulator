@@ -122,3 +122,47 @@ A 3-step wizard: Character Builder → Scenario Setup → Results. Results are d
 | Embeddings | Gemini Embedding 001 |
 | API | FastAPI + Uvicorn |
 | Frontend | Next.js 14 + React Flow + Tailwind |
+| Knowledge Limiter | Multi-layer cognitive constraint pipeline (Pydantic v2 + Jinja2) |
+
+---
+
+## Knowledge Limiter Module
+
+The **Knowledge Limiter** enforces realistic knowledge boundaries across AI personas (e.g., ensuring a cardiologist does not casually produce or comprehend deep learning jargon such as backpropagation, LoRA, or transformers).
+
+### Directory Structure
+```
+backend/knowledge_limiter/
+├── schemas/            ← Pydantic models (Level, Topic, KLPersona, KnowledgeConfig)
+├── topic_generation/   ← Setup-time topic & concept generator with SHA256 cache
+├── router/             ← Lexicon pre-pass & runtime message classifier
+├── generation/         ← Positive knowledge prompt engine & turn steering
+├── verification/       ← Lexicon violation detector & LLM verifier
+├── memory/             ← Isolated conversation memory & dynamic concept learning
+├── eval/               ← Probe dataset, adversarial tests & evaluation runner
+├── api/                ← FastAPI endpoints (/kl/topics/generate, /kl/config/save, /kl/chat/{id})
+└── cli.py              ← Typer CLI prototype & benchmark suite
+```
+
+### Running Tests
+To run all 80 unit & integration tests:
+```bash
+python -m pytest backend/knowledge_limiter/tests/ -v
+```
+
+### Running the Doctor-vs-AI-Engineer CLI Demo
+```bash
+python -m backend.knowledge_limiter.cli demo --turns 4
+```
+
+### Running the Evaluation Harness
+```bash
+python -m backend.knowledge_limiter.cli eval-probes
+```
+
+### Knowledge Limiter API Endpoints
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/kl/topics/generate` | Generate suggested scenario topics & inferred persona levels |
+| `POST` | `/kl/config/save` | Compile user-reviewed topics into runtime `KnowledgeConfig` |
+| `POST` | `/kl/chat/{persona_id}` | Full runtime pipeline: route → generate → verify with retries |

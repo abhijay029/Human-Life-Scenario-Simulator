@@ -8,3 +8,25 @@ frontend/.next
 test_model.ipynb
 testing.py
 notebooks/
+# Python environments and test artifacts
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.py[cod]
+*.egg-info/
+
+# Frontend generated files
+frontend/out/
+frontend/.vercel/
+frontend/npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other local environment files
+.env.*
+!.env.example
+**/.cache/

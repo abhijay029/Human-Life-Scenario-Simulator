@@ -147,9 +147,10 @@ function buildGraph(
     const x = startX - totalWidth / 2 + i * BRANCH_SPACING
     const branchId = `branch-${i}`
 
-    const avgProb =
-      branch.analysis?.persona_goal_success?.reduce((s, p) => s + p.success_probability, 0) /
-        (branch.analysis?.persona_goal_success?.length || 1) || undefined
+    const goals = branch.analysis?.persona_goal_success
+    const avgProb = goals && goals.length > 0
+      ? goals.reduce((s, p) => s + p.success_probability, 0) / goals.length
+      : undefined
 
     const isBest = branch.decision_point === bestDp
     const isWorst = branch.decision_point === worstDp

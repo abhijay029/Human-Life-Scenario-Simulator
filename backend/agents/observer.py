@@ -28,10 +28,8 @@ class Observation(BaseModel):
     relationship_trajectory: Literal["improving", "stable", "deteriorating"] = Field(description="The current status and direction of the relationship between the speakers. This value can be 'improving', 'stable', or 'deteriorating'")
     trajectory_explanation: str = Field(description="Explanation for the predicted relationship trajectory in one line.")
     persona_goal_success: list[PersonaGoalSuccess]
-    outcome_category: Literal["In favor", "disfavor"] = Field(
-        description="The category of the branch. It can have the following values: "
-        "'In favor': Means the outcome is in favor of the user. "
-        "'disfavor': Means the outcome is not in favor of the user."
+    outcome_category: Literal["Best Case", "Most Likely", "Worst Case"] = Field(
+        description="The category of the outcome: 'Best Case', 'Most Likely', or 'Worst Case'."
     )
     outcome_summary: str = Field(description="Summary of the outcome of this branch in maximum of 2 sentences.")
     key_turning_points: list[str] = Field(
@@ -53,7 +51,6 @@ OBSERVER_SYSTEM_PROMPT = """You are a psychology analyst AI. Analyse the dialogu
 
 Rules:
 - Keep ALL strings under 12 words. Be extremely concise.
-- turn_sentiments: max 2 per speaker, combine if needed
 - Return the complete JSON in one response"""
 
 OBSERVER_HUMAN_PROMPT = """Scenario: {scenario}

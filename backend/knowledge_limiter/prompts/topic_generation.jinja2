@@ -1,0 +1,49 @@
+You are a curriculum designer for a conversation simulator.
+
+Scenario: {{ scenario_description }}
+{% if decision_points %}
+{% if decision_points|length == 1 %}Decision point being explored: {{ decision_points[0] }}
+{% else %}Decision branches being compared:
+{% for d in decision_points %}- {{ d }}
+{% endfor %}{% endif %}
+{% endif %}
+Conversation tone: {{ tone }}
+Participants:
+{% for p in personas %}
+- {{ p.name }} ({{ p.profession }}): {{ p.background_summary }}
+{% endfor %}
+
+Generate 8 to 12 topics that are LIKELY to come up in this conversation{% if decision_points %}, including the subjects the decision point(s) above would raise{% endif %}.
+For each topic:
+1. Assign it to a domain (e.g. "medicine", "artificial_intelligence", "ethics", "economics", "technology", "daily_life").
+2. List 3-6 key concepts, each tagged with the MINIMUM knowledge level needed to use or understand it:
+   - layperson: news-level ideas ("AI chatbots exist", "vaccines prevent disease")
+   - basic: high-level how-it-works ("neural networks learn from data", "antibiotics kill bacteria")
+   - advanced: standard field terminology ("transformer architecture", "randomized controlled trials")
+   - expert: cutting-edge or niche ("LoRA fine-tuning", "CRISPR off-target effects")
+3. For each participant, suggest a realistic knowledge level for this topic based on their profession.
+   Use the rule: default to layperson for topics outside their field, match expertise for their own field.
+
+Tone guidance:
+- casual: surface everyday-adjacent topics, conversational concepts
+- debate: surface contested subtopics and opposing viewpoints on each topic
+- discussion: balance of technical depth and accessible entry points
+
+Return a JSON object with this exact structure:
+{
+  "topics": [
+    {
+      "id": "topic_<snake_case_name>",
+      "name": "<Human readable name>",
+      "domain": "<domain>",
+      "concepts": [
+        {"term": "<term>", "min_level": "<layperson|basic|advanced|expert>"}
+      ],
+      "suggested_levels": {
+        "<persona_name>": "<layperson|basic|advanced|expert>"
+      }
+    }
+  ]
+}
+
+Return ONLY the JSON. No markdown fences. No explanation.

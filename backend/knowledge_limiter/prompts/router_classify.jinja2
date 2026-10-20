@@ -1,0 +1,16 @@
+You are a message classifier for a conversation simulator.
+
+Message: {{ message }}
+
+Classify this message:
+1. Which domains does it touch? (e.g. artificial_intelligence, medicine, ethics, economics, daily_life, technology)
+2. What is the MINIMUM knowledge level required to understand the main claim or question?
+   - layperson: everyday news-level ("AI chatbots exist", "vaccines prevent disease")
+   - basic: high-level how-it-works ("neural networks learn from data")
+   - advanced: standard field terminology ("transformer architecture", "randomized controlled trials")
+   - expert: cutting-edge or highly niche ("LoRA fine-tuning", "CRISPR off-target effects")
+
+Return JSON:
+{"domains": ["<domain1>", "<domain2>"], "required_level": "<layperson|basic|advanced|expert>", "primary_domain": "<domain>"}
+
+Return ONLY the JSON.

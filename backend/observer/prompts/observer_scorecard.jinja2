@@ -1,0 +1,47 @@
+You are an expert conversation analyst performing a comprehensive post-simulation evaluation.
+
+SCENARIO CONTEXT:
+{{ scenario_description if scenario_description else "A conversational scenario between multiple participants." }}
+
+PARTICIPANTS:
+{% for p in participants %}
+- {{ p }}
+{% endfor %}
+
+COMPLETE DIALOGUE TRANSCRIPT:
+{% for turn in dialogue %}
+Turn {{ turn.turn_index }} - {{ turn.speaker }}: {{ turn.message }}
+{% endfor %}
+
+SUMMARY OF OBSERVED RELATIONSHIP DYNAMICS:
+{% for summary in trajectory_summaries %}
+- {{ summary.dyad_pair }} | {{ summary.dimension }}: start={{ summary.start }}, current={{ summary.current }}, slope={{ summary.slope }}, trend={{ summary.label }}
+{% endfor %}
+
+EVALUATION CRITERIA (Score 1.0 to 10.0):
+1. persona_consistency: Did participants adhere realistically to their roles, backgrounds, and traits?
+2. emotional_realism: Did emotional progression feel natural, proportional, and human?
+3. conversational_coherence: Was dialogue responsive, logically connected, and fluid?
+4. goal_alignment: Did participants pursue their underlying objectives or express them realistically?
+5. conflict_realism: Were disagreements, tension spikes, or agreements handled with authentic social dynamics?
+6. social_plausibility: Could this conversation credibly occur between real humans in this situation?
+7. overall_realism: Comprehensive synthesis score of conversation realism.
+
+Return a valid JSON object matching this schema:
+{
+  "persona_consistency": float (1.0 to 10.0),
+  "emotional_realism": float (1.0 to 10.0),
+  "conversational_coherence": float (1.0 to 10.0),
+  "goal_alignment": float (1.0 to 10.0),
+  "conflict_realism": float (1.0 to 10.0),
+  "social_plausibility": float (1.0 to 10.0),
+  "overall_realism": float (1.0 to 10.0),
+  "goal_success": {
+    "ParticipantName": float (0.0 to 1.0)
+  },
+  "outcome_category": "Best Case" | "Most Likely" | "Worst Case",
+  "key_turning_points": ["string"],
+  "recommendations": ["string"],
+  "summary": "string"
+}
+Return ONLY the JSON object.

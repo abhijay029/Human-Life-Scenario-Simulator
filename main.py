@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes import router
+from backend.knowledge_limiter.api.routes import router as kl_router
+from backend.observer.api import router as observer_router
 
 app = FastAPI(
     title="Human Life Scenario Simulator",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 app.add_middleware(
@@ -19,3 +21,5 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(kl_router)
+app.include_router(observer_router)

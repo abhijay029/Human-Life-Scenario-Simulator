@@ -49,6 +49,7 @@ export interface SimulationResponse {
   decision_point: string
   dialogue_log: DialogueTurn[]
   analysis?: ObserverAnalysis
+  session_id?: string
 }
 
 // ── Multiverse ─────────────────────────────────────────────────────────────
@@ -81,3 +82,76 @@ export interface BuildPersonaResponse {
 export type AppStep = 'build' | 'simulate' | 'results'
 
 export type SimMode = 'single' | 'multiverse'
+
+// ── Observer Agent (real-time) ──────────────────────────────────────────────
+
+export interface DyadState {
+  from_party: string
+  to_party: string
+  trust: number
+  rapport: number
+  tension: number
+  respect: number
+  power_balance: number
+}
+
+export interface TurningPoint {
+  turn_index: number
+  dimension: string
+  delta: number
+  value_after: number
+  reason: string
+}
+
+export interface TurnObservation {
+  session_id: string
+  turn_index: number
+  speaker: string
+  sentiment: 'positive' | 'neutral' | 'negative'
+  sentiment_score: number
+  emotion_labels: string[]
+  dyad_deltas: Record<string, Record<string, number>>
+  dyad_states: DyadState[]
+  key_event: string | null
+  confidence: number
+  degraded: boolean
+  timestamp: number
+}
+
+export interface TrajectorySummary {
+  dyad_pair: string
+  dimension: string
+  start: number
+  current: number
+  min_value: number
+  max_value: number
+  slope: number
+  label: 'improving' | 'stable' | 'deteriorating'
+  turning_points: TurningPoint[]
+  /** Full per-turn value history (index 0 = initial state) */
+  history: number[]
+}
+
+export interface ConversationScorecard {
+  session_id: string
+  persona_consistency: number
+  emotional_realism: number
+  conversational_coherence: number
+  goal_alignment: number
+  conflict_realism: number
+  social_plausibility: number
+  overall_realism: number
+  goal_success: Record<string, number>
+  outcome_category: 'Best Case' | 'Most Likely' | 'Worst Case'
+  key_turning_points: string[]
+  recommendations: string[]
+  summary: string
+}
+
+export interface ObserverSSEState {
+  observations: TurnObservation[]
+  trajectories: TrajectorySummary[]
+  scorecard: ConversationScorecard | null
+  connected: boolean
+  finalized: boolean
+}

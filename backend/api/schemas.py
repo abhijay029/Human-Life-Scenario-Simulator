@@ -5,7 +5,7 @@ Pydantic models for FastAPI request bodies and response shapes.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 
 
 # ── Persona ──────────────────────────────────────────────────────────────────
@@ -32,6 +32,10 @@ class RunSimulationRequest(BaseModel):
     store_memories: bool = Field(
         default=True,
         description="Pre-load persona facts into ChromaDB before running."
+    )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Observer session ID for real-time tracking"
     )
 
 
@@ -60,7 +64,7 @@ class ObserverAnalysis(BaseModel):
     relationship_trajectory: str
     trajectory_explanation: str
     persona_goal_success: list[PersonaGoalSuccess]
-    outcome_category: str
+    outcome_category: Literal["Best Case", "Most Likely", "Worst Case"] = "Most Likely"
     outcome_summary: str
     key_turning_points: list[str]
     recommendations: list[str]
@@ -71,6 +75,8 @@ class SimulationResponse(BaseModel):
     decision_point: str
     dialogue_log: list[DialogueTurn]
     analysis: Optional[ObserverAnalysis] = None
+    analysis_error: Optional[str] = None
+    session_id: Optional[str] = None
 
 
 # ── Multiverse ────────────────────────────────────────────────────────────────

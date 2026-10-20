@@ -3,17 +3,20 @@ import { useState, useRef } from 'react'
 import type { PersonaSchema, SimMode, SimulationResponse, MultiverseResponse } from '@/lib/types'
 import { runSimulation, runMultiverse } from '@/lib/api'
 import CharacterBuilder from '@/components/CharacterBuilder'
+import KnowledgeSetup from '@/components/KnowledgeSetup'
 import ScenarioSetup from '@/components/ScenarioSetup'
 import SimulatingScreen from '@/components/SimulatingScreen'
 import ResultsView from '@/components/ResultsView'
 import { clsx } from 'clsx'
-import { Users, Settings, BarChart2, Cpu } from 'lucide-react'
+import { Users, BookOpen, Settings, BarChart2, Cpu } from 'lucide-react'
+import type { KLPersona, KLTopic, KnowledgeConfig, Tone } from '@/lib/knowledgeLimiterApi'
 
 // ── Step indicator ─────────────────────────────────────────────────────────
 
 const STEPS = [
   { key: 'build', label: 'Characters', icon: Users },
-  { key: 'simulate', label: 'Scenario', icon: Settings },
+  { key: 'scenario', label: 'Scenario', icon: Settings },
+  { key: 'knowledge', label: 'Knowledge Profiles', icon: BookOpen },
   { key: 'results', label: 'Results', icon: BarChart2 },
 ]
 
@@ -93,8 +96,9 @@ const DEFAULT_PERSONAS: PersonaSchema[] = [
 // ── Main App ───────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [step, setStep] = useState<'build' | 'simulate' | 'running' | 'results'>('build')
+  const [step, setStep] = useState<'build' | 'scenario' | 'knowledge' | 'running' | 'results'>('build')
   const [personas, setPersonas] = useState<PersonaSchema[]>(DEFAULT_PERSONAS)
+  const [knowledgeConfig, setKnowledgeConfig] = useState<KnowledgeConfig | undefined>()
   const [mode, setMode] = useState<SimMode>('single')
   const [scenario, setScenario] = useState(
     'Arjun has just told his father Rahul that he wants to drop his engineering career and pursue music full time after graduation.'
@@ -108,8 +112,12 @@ export default function Home() {
     'Arjun brings a mediator: he asks his mother to be present and starts the conversation gently.',
   ])
   const [maxTurns, setMaxTurns] = useState(4)
+  const [tone, setTone] = useState<Tone>('discussion')
+  // Topics generated for a specific set of scenario inputs (see topicsKey below).
+  const [topicCache, setTopicCache] = useState<{ key: string; topics: KLTopic[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [sessionId, setSessionId] = useState('')
   const [singleResult, setSingleResult] = useState<SimulationResponse | undefined>()
   const [multiverseResult, setMultiverseResult] = useState<MultiverseResponse | undefined>()
 
@@ -124,6 +132,9 @@ export default function Home() {
     setLoading(true)
     setStep('running')
 
+    const sid = `sim_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
+    setSessionId(sid)
+
     try {
       if (mode === 'single') {
         const res = await runSimulation({
@@ -132,6 +143,7 @@ export default function Home() {
           decision_point: decisionPoint,
           max_turns: maxTurns,
           store_memories: true,
+          session_id: sid,
         })
         setSingleResult(res)
         setMultiverseResult(undefined)
@@ -150,7 +162,7 @@ export default function Home() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Simulation failed'
       setError(msg)
-      setStep('simulate')
+      setStep('knowledge')
     } finally {
       setLoading(false)
       isRunning.current = false            // release lock
@@ -161,11 +173,35 @@ export default function Home() {
     setStep('build')
     setSingleResult(undefined)
     setMultiverseResult(undefined)
+    setSessionId('')
     setError('')
     isRunning.current = false
   }
 
-  const displayStep = step === 'running' ? 'simulate' : step
+  const displayStep = step === 'running' ? 'knowledge' : step
+
+  const klPersonas: KLPersona[] = personas.map((p, idx) => ({
+    id: `p_${idx}`,
+    name: p.name,
+    profession: p.occupation,
+    personality: {
+      traits: p.personality_traits,
+      speech_style: p.communication_style,
+      boundary_behavior: 'ask_back',
+    },
+    default_level: 'layperson',
+    own_domain: p.occupation.toLowerCase().includes('engineer') ? 'engineering' : 'business',
+    background_summary: p.background,
+  }))
+
+  // What the topic generator reads. If any of it changes, cached topics are discarded.
+  const decisionPoints = mode === 'single' ? [decisionPoint] : decisionBranches
+  const topicsKey = JSON.stringify({
+    scenario,
+    tone,
+    decisionPoints,
+    personas: klPersonas.map((p) => [p.name, p.profession, p.background_summary]),
+  })
 
   return (
     <div className="min-h-screen grid-bg">
@@ -189,47 +225,68 @@ export default function Home() {
           {step !== 'running' && <StepBar current={displayStep} />}
 
           <div className="text-[10px] font-mono text-text-dim hidden sm:block">
-            v0.3.0
+            v0.4.0
           </div>
         </div>
       </header>
 
       {/* Main content */}
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {step === 'running' && <SimulatingScreen mode={mode} />}
+        {step === 'running' && <SimulatingScreen mode={mode} sessionId={sessionId} />}
 
         {step === 'build' && (
           <CharacterBuilder
             personas={personas}
             onChange={setPersonas}
-            onNext={() => setStep('simulate')}
+            onNext={() => setStep('scenario')}
           />
         )}
 
-        {step === 'simulate' && (
-          <>
-            {error && (
-              <div className="mb-4 p-3 bg-red-alert/10 border border-red-alert/30 rounded text-xs font-mono text-red-alert">
-                ⚠ {error}
-              </div>
-            )}
-            <ScenarioSetup
-              personas={personas}
-              mode={mode}
-              onModeChange={setMode}
-              scenario={scenario}
-              onScenarioChange={setScenario}
-              decisionPoint={decisionPoint}
-              onDecisionPointChange={setDecisionPoint}
-              decisionBranches={decisionBranches}
-              onDecisionBranchesChange={setDecisionBranches}
-              maxTurns={maxTurns}
-              onMaxTurnsChange={setMaxTurns}
-              onBack={() => setStep('build')}
-              onRun={handleRun}
-              loading={loading}
-            />
-          </>
+        {step === 'scenario' && (
+          <ScenarioSetup
+            personas={personas}
+            mode={mode}
+            onModeChange={setMode}
+            scenario={scenario}
+            onScenarioChange={setScenario}
+            decisionPoint={decisionPoint}
+            onDecisionPointChange={setDecisionPoint}
+            decisionBranches={decisionBranches}
+            onDecisionBranchesChange={setDecisionBranches}
+            tone={tone}
+            onToneChange={setTone}
+            onBack={() => setStep('build')}
+            onNext={() => {
+              setError('')
+              setStep('knowledge')
+            }}
+          />
+        )}
+
+        {step === 'knowledge' && (
+          <KnowledgeSetup
+            personas={klPersonas}
+            scenarioId="scenario_active"
+            scenarioDescription={scenario}
+            decisionPoints={decisionPoints}
+            tone={tone}
+            mode={mode}
+            inputKey={topicsKey}
+            cachedTopics={topicCache}
+            onTopicsChange={(key, topics) => setTopicCache({ key, topics })}
+            maxTurns={maxTurns}
+            onMaxTurnsChange={setMaxTurns}
+            running={loading}
+            runError={error}
+            onBack={() => {
+              setError('')
+              setStep('scenario')
+            }}
+            onRun={(cfg) => {
+              if (cfg) setKnowledgeConfig(cfg)
+              handleRun()
+            }}
+          />
         )}
 
         {step === 'results' && (
@@ -238,6 +295,7 @@ export default function Home() {
             singleResult={singleResult}
             multiverseResult={multiverseResult}
             onReset={handleReset}
+            sessionId={sessionId || singleResult?.session_id}
           />
         )}
       </main>

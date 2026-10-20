@@ -3,16 +3,18 @@ import { useState } from 'react'
 import type { SimulationResponse, MultiverseResponse, SimMode } from '@/lib/types'
 import DialogueViewer from './DialogueViewer'
 import AnalysisPanel from './AnalysisPanel'
+import ObserverPanel from './ObserverPanel'
 import ComparisonReportPanel from './ComparisonReport'
 import { Panel, Button, Badge } from './ui'
-import { MessageSquare, BarChart2, GitBranch, RefreshCw } from 'lucide-react'
+import { MessageSquare, BarChart2, GitBranch, RefreshCw, Activity } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { clsx } from 'clsx'
+import { useObserverStream } from '@/lib/useObserverStream'
 
 // React Flow needs client-only rendering
 const DecisionTree = dynamic(() => import('./DecisionTree'), { ssr: false })
 
-type Tab = 'dialogue' | 'analysis' | 'tree' | 'report'
+type Tab = 'dialogue' | 'analysis' | 'observer' | 'tree' | 'report'
 
 function TabBtn({
   active,
@@ -43,11 +45,14 @@ function TabBtn({
 function SingleResult({
   result,
   onReset,
+  sessionId,
 }: {
   result: SimulationResponse
   onReset: () => void
+  sessionId?: string
 }) {
-  const [tab, setTab] = useState<'dialogue' | 'analysis'>('dialogue')
+  const [tab, setTab] = useState<'dialogue' | 'analysis' | 'observer'>('dialogue')
+  const observer = useObserverStream(sessionId ?? null)
 
   return (
     <div className="space-y-5">
@@ -91,6 +96,15 @@ function SingleResult({
             <BarChart2 size={12} /> Analysis
           </TabBtn>
         )}
+        {sessionId && (
+          <TabBtn active={tab === 'observer'} onClick={() => setTab('observer')}>
+            <Activity size={12} />
+            Observer
+            {observer.connected && (
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
+            )}
+          </TabBtn>
+        )}
       </div>
 
       {tab === 'dialogue' && (
@@ -103,9 +117,13 @@ function SingleResult({
       {tab === 'analysis' && result.analysis && (
         <AnalysisPanel analysis={result.analysis} />
       )}
+      {tab === 'observer' && sessionId && (
+        <ObserverPanel observer={observer} />
+      )}
     </div>
   )
 }
+
 
 // ── Multiverse Result ──────────────────────────────────────────────────────
 
@@ -229,14 +247,22 @@ export default function ResultsView({
   singleResult,
   multiverseResult,
   onReset,
+  sessionId,
 }: {
   mode: SimMode
   singleResult?: SimulationResponse
   multiverseResult?: MultiverseResponse
   onReset: () => void
+  sessionId?: string
 }) {
   if (mode === 'single' && singleResult) {
-    return <SingleResult result={singleResult} onReset={onReset} />
+    return (
+      <SingleResult
+        result={singleResult}
+        onReset={onReset}
+        sessionId={sessionId || singleResult.session_id}
+      />
+    )
   }
   if (mode === 'multiverse' && multiverseResult) {
     return <MultiverseResult result={multiverseResult} onReset={onReset} />
