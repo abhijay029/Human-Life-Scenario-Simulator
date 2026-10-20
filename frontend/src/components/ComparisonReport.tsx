@@ -1,32 +1,40 @@
 'use client'
 import type { ComparisonReport } from '@/lib/types'
 import { Panel, ProgressBar } from './ui'
-import { Trophy, AlertOctagon } from 'lucide-react'
+import { Trophy, AlertOctagon, Activity } from 'lucide-react'
 import { clsx } from 'clsx'
 
 function ReportCard({
   type,
   data,
 }: {
-  type: 'better' | 'worse'
+  type: 'best' | 'worst' | 'likely'
   data: { decision_point: string; outcome_category?: string; outcome_summary?: string; avg_success_probability: number }
 }) {
   const config = {
-    better: {
+    best: {
       icon: Trophy,
-      label: 'Better Case',
+      label: 'Best Case',
       border: 'border-green-good/30',
       bg: 'bg-green-good/5',
       iconColor: 'text-green-good',
       headerBg: 'bg-green-good/10',
     },
-    worse: {
+    worst: {
       icon: AlertOctagon,
-      label: 'Worse Case',
+      label: 'Worst Case',
       border: 'border-red-alert/30',
       bg: 'bg-red-alert/5',
       iconColor: 'text-red-alert',
       headerBg: 'bg-red-alert/10',
+    },
+    likely: {
+      icon: Activity,
+      label: 'Most Likely',
+      border: 'border-amber-sim/30',
+      bg: 'bg-amber-sim/5',
+      iconColor: 'text-amber-sim',
+      headerBg: 'bg-amber-sim/10',
     },
   }
 
@@ -62,9 +70,10 @@ export default function ComparisonReportPanel({ report }: { report: ComparisonRe
   return (
     <div className="space-y-4">
       {/* The three headline cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <ReportCard type="better" data={report.better_case} />
-        <ReportCard type="worse" data={report.worse_case} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <ReportCard type="best" data={report.best_case} />
+        <ReportCard type="likely" data={report.most_likely} />
+        <ReportCard type="worst" data={report.worst_case} />
       </div>
 
       {/* Rankings table */}
