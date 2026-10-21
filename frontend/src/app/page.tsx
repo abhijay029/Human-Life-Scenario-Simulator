@@ -147,6 +147,7 @@ export default function Home() {
           decision_point: decisionPoint,
           max_turns: maxTurns,
           store_memories: true,
+          session_id: sid,
         }, (event: SimulationStreamEvent) => {
           if (event.type === 'dialogue_turn') {
             setLiveDialogue((previous) => [
@@ -263,6 +264,7 @@ export default function Home() {
           <SimulatingScreen
             mode={mode}
             decisionPoint={mode === 'single' ? decisionPoint : scenario}
+            sessionId={sessionId || null}
             liveDialogue={liveDialogue}
             liveBranches={liveBranches}
           />

@@ -8,6 +8,7 @@ import os
 import json
 import asyncio
 import threading
+import uuid
 from queue import Empty, Queue
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
@@ -89,6 +90,8 @@ async def simulate(req: RunSimulationRequest):
             detail="A simulation is already running. Please wait for it to finish."
         )
 
+    session_id = req.session_id or f"sim_{uuid.uuid4().hex[:12]}"
+
     def _run():
         try:
             personas = [Persona(**p.model_dump()) for p in req.personas]
@@ -103,6 +106,7 @@ async def simulate(req: RunSimulationRequest):
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
+                session_id=session_id,
             )
 
             try:
@@ -120,6 +124,7 @@ async def simulate(req: RunSimulationRequest):
                 decision_point=req.decision_point,
                 dialogue_log=dialogue_log,
                 analysis=analysis_raw,
+                session_id=session_id,
             )
         finally:
             _sim_lock.release()
@@ -198,8 +203,32 @@ async def simulate_stream(req: RunSimulationRequest):
     if not _sim_lock.acquire(blocking=False):
         raise HTTPException(status_code=429, detail="A simulation is already running. Please wait for it to finish.")
 
+    session_id = req.session_id or f"sim_{uuid.uuid4().hex[:12]}"
     events = Queue()
     personas = [Persona(**p.model_dump()) for p in req.personas]
+
+    # Register the observer before starting the simulation so its worker can
+    # evaluate each completed dialogue turn as soon as it is emitted.
+    from backend.observer.pipeline import get_pipeline
+    from backend.observer.schemas import TurnEvent
+
+    pipeline = get_pipeline()
+    pipeline.get_or_create_session(
+        session_id,
+        participants=[persona.name for persona in personas],
+        scenario_description=req.scenario,
+    )
+    pipeline.start_worker(session_id)
+
+    def on_turn(turn: dict) -> None:
+        events.put(turn)
+        pipeline.emit_turn_sync(TurnEvent(
+            session_id=session_id,
+            turn_index=turn["turn"] - 1,
+            speaker=turn["speaker"],
+            listeners=[persona.name for persona in personas if persona.name != turn["speaker"]],
+            message=turn["message"],
+        ))
 
     def worker():
         try:
@@ -215,7 +244,8 @@ async def simulate_stream(req: RunSimulationRequest):
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
-                on_event=events.put,
+                on_event=on_turn,
+                session_id=session_id,
             )
 
             events.put({"type": "status", "message": "Observer analysing outcomes"})
@@ -234,11 +264,13 @@ async def simulate_stream(req: RunSimulationRequest):
                 decision_point=req.decision_point,
                 dialogue_log=dialogue_log,
                 analysis=analysis,
+                session_id=session_id,
             )
             events.put({"type": "completed", "result": result.model_dump()})
         except Exception as exc:
             events.put({"type": "error", "message": str(exc)})
         finally:
+            pipeline.finalize_session_sync(session_id)
             _sim_lock.release()
             events.put(None)
 

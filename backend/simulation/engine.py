@@ -267,6 +267,7 @@ def build_simulation_graph(agents: dict[str, PersonaAgent], on_event=None):
             state["dialogue_log"], state["scenario"],
             state["decision_point"], state["current_turn"],
         )
+        new_log = state["dialogue_log"] + [{"speaker": name, "message": reply}]
         counts = dict(state["turn_counts"])
         counts[name] = counts.get(name, 0) + 1
         if on_event:
@@ -295,7 +296,7 @@ def build_simulation_graph(agents: dict[str, PersonaAgent], on_event=None):
 
 def run_simulation(personas: list[Persona], scenario: str,
                    decision_point: str, max_turns: int = 4,
-                   on_event=None) -> list[dict]:
+                   on_event=None, session_id: Optional[str] = None) -> list[dict]:
     """Run a simulation and optionally emit completed dialogue turns.
 
     ``on_event`` is deliberately called only after a persona has produced a

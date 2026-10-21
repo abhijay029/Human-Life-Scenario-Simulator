@@ -1,6 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import type { DialogueTurn, SimMode } from '@/lib/types'
+import { useObserverStream } from '@/lib/useObserverStream'
+import { Activity, Wifi } from 'lucide-react'
+import { clsx } from 'clsx'
 import DialogueViewer from './DialogueViewer'
 
 const SINGLE_STEPS = [
@@ -28,11 +31,13 @@ const MULTI_STEPS = [
 export default function SimulatingScreen({
   mode,
   decisionPoint,
+  sessionId,
   liveDialogue,
   liveBranches,
 }: {
   mode: SimMode
   decisionPoint: string
+  sessionId?: string | null
   liveDialogue: DialogueTurn[]
   liveBranches: Record<string, DialogueTurn[]>
 }) {
