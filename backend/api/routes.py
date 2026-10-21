@@ -6,15 +6,13 @@ All FastAPI route handlers.
 
 import os
 import json
-import uuid
 import asyncio
 import threading
-import logging
+from queue import Empty, Queue
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
-
-logger = logging.getLogger(__name__)
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -46,8 +44,32 @@ _sim_lock = threading.Lock()
 _llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
     google_api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=0,
 )
+
+
+def _sse(event: dict) -> str:
+    """Encode one JSON event using the SSE wire format."""
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+async def _event_stream(events: Queue):
+    """Read blocking worker events without blocking FastAPI's event loop."""
+    while True:
+        def get_event():
+            try:
+                return events.get(timeout=15)
+            except Empty:
+                return {"type": "heartbeat"}
+
+        event = await asyncio.to_thread(get_event)
+        if event is None:
+            break
+        if event.get("type") == "heartbeat":
+            # Keep proxies and browsers from closing an otherwise healthy stream.
+            yield ": keep-alive\n\n"
+            continue
+
+        yield _sse(event)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -67,34 +89,6 @@ async def simulate(req: RunSimulationRequest):
             detail="A simulation is already running. Please wait for it to finish."
         )
 
-    session_id = req.session_id or f"sim_{uuid.uuid4().hex[:12]}"
-    loop = asyncio.get_running_loop()
-    lock_released = threading.Event()
-
-    def _release_sim_lock():
-        # The worker normally releases the lock. If dispatch fails before the
-        # worker starts, the request handler releases it instead. Keep this
-        # idempotent because an exception from the worker also reaches the
-        # handler's except block.
-        if not lock_released.is_set():
-            lock_released.set()
-            _sim_lock.release()
-
-    # Pre-register observer session and start async worker directly on main event loop
-    try:
-        from backend.observer.pipeline import get_pipeline
-        pipeline = get_pipeline()
-        pipeline.set_loop(loop)
-        participant_names = [p.name for p in req.personas]
-        pipeline.get_or_create_session(
-            session_id,
-            participants=participant_names,
-            scenario_description=req.scenario,
-        )
-        pipeline.start_worker(session_id)
-    except Exception as _obs_init_exc:
-        logger.warning("Observer startup failed: %s", _obs_init_exc)
-
     def _run():
         try:
             personas = [Persona(**p.model_dump()) for p in req.personas]
@@ -109,11 +103,8 @@ async def simulate(req: RunSimulationRequest):
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
-                session_id=session_id,
             )
 
-            analysis_raw = None
-            analysis_err_msg = None
             try:
                 analysis_raw = analyse_dialogue(
                     dialogue_log=dialogue_log,
@@ -121,20 +112,17 @@ async def simulate(req: RunSimulationRequest):
                     decision_point=req.decision_point,
                     personas=[p.model_dump() for p in personas],
                 )
-            except Exception as exc:
-                analysis_err_msg = str(exc)
-                logger.error("[Observer Error] Scenario: '%s', Error: %s", req.scenario[:60], exc)
+            except Exception:
+                analysis_raw = None
 
             return SimulationResponse(
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 dialogue_log=dialogue_log,
                 analysis=analysis_raw,
-                analysis_error=analysis_err_msg,
-                session_id=session_id,
             )
         finally:
-            _release_sim_lock()
+            _sim_lock.release()
             # del mem
 
     try:
@@ -142,7 +130,7 @@ async def simulate(req: RunSimulationRequest):
         result = await loop.run_in_executor(_executor, _run)
         return result
     except Exception as exc:
-        _release_sim_lock()
+        _sim_lock.release()
         raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}")
 
 
@@ -155,13 +143,6 @@ async def multiverse(req: RunMultiverseRequest):
             status_code=429,
             detail="A simulation is already running. Please wait for it to finish."
         )
-
-    lock_released = threading.Event()
-
-    def _release_sim_lock():
-        if not lock_released.is_set():
-            lock_released.set()
-            _sim_lock.release()
 
     def _run():
         try:
@@ -198,15 +179,141 @@ async def multiverse(req: RunMultiverseRequest):
                 comparison_report=comparison,
             )
         finally:
-            _release_sim_lock()
+            _sim_lock.release()
 
     try:
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(_executor, _run)
         return result
     except Exception as exc:
-        _release_sim_lock()
+        _sim_lock.release()
         raise HTTPException(status_code=500, detail=f"Multiverse failed: {exc}")
+
+
+# ── Streaming simulation endpoints ──────────────────────────────────────────
+
+@router.post("/simulate/stream")
+async def simulate_stream(req: RunSimulationRequest):
+    """Stream completed persona turns while a single simulation is running."""
+    if not _sim_lock.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="A simulation is already running. Please wait for it to finish.")
+
+    events = Queue()
+    personas = [Persona(**p.model_dump()) for p in req.personas]
+
+    def worker():
+        try:
+            events.put({"type": "simulation_started"})
+            if req.store_memories:
+                for persona in personas:
+                    mem = PersonaMemory(persona.name)
+                    if mem.count() == 0:
+                        mem.store_persona_facts(persona)
+
+            dialogue_log = run_simulation(
+                personas=personas,
+                scenario=req.scenario,
+                decision_point=req.decision_point,
+                max_turns=req.max_turns,
+                on_event=events.put,
+            )
+
+            events.put({"type": "status", "message": "Observer analysing outcomes"})
+            try:
+                analysis = analyse_dialogue(
+                    dialogue_log=dialogue_log,
+                    scenario=req.scenario,
+                    decision_point=req.decision_point,
+                    personas=[p.model_dump() for p in personas],
+                )
+            except Exception:
+                analysis = None
+
+            result = SimulationResponse(
+                scenario=req.scenario,
+                decision_point=req.decision_point,
+                dialogue_log=dialogue_log,
+                analysis=analysis,
+            )
+            events.put({"type": "completed", "result": result.model_dump()})
+        except Exception as exc:
+            events.put({"type": "error", "message": str(exc)})
+        finally:
+            _sim_lock.release()
+            events.put(None)
+
+    try:
+        _executor.submit(worker)
+    except Exception:
+        _sim_lock.release()
+        raise
+
+    return StreamingResponse(
+        _event_stream(events),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/multiverse/stream")
+async def multiverse_stream(req: RunMultiverseRequest):
+    """Stream turns and lifecycle events for each sequential multiverse branch."""
+    if not _sim_lock.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="A simulation is already running. Please wait for it to finish.")
+
+    events = Queue()
+    personas = [Persona(**p.model_dump()) for p in req.personas]
+
+    def worker():
+        try:
+            events.put({"type": "simulation_started"})
+            if req.store_memories:
+                for persona in personas:
+                    mem = PersonaMemory(persona.name)
+                    if mem.count() == 0:
+                        mem.store_persona_facts(persona)
+
+            results = run_multiverse(
+                personas=personas,
+                scenario=req.scenario,
+                decision_branches=req.decision_branches,
+                max_turns=req.max_turns,
+                on_event=events.put,
+            )
+            events.put({"type": "status", "message": "Generating comparison report"})
+
+            branches = [
+                SimulationResponse(
+                    scenario=req.scenario,
+                    decision_point=result["decision_point"],
+                    dialogue_log=result["dialogue_log"],
+                    analysis=result.get("analysis"),
+                )
+                for result in results
+            ]
+            response = MultiverseResponse(
+                scenario=req.scenario,
+                branches=branches,
+                comparison_report=generate_comparison_report(results),
+            )
+            events.put({"type": "completed", "result": response.model_dump()})
+        except Exception as exc:
+            events.put({"type": "error", "message": str(exc)})
+        finally:
+            _sim_lock.release()
+            events.put(None)
+
+    try:
+        _executor.submit(worker)
+    except Exception:
+        _sim_lock.release()
+        raise
+
+    return StreamingResponse(
+        _event_stream(events),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Character Builder ─────────────────────────────────────────────────────────
@@ -230,71 +337,19 @@ Return ONLY the JSON. No markdown. No explanation."""
 @router.post("/characters/build", response_model=BuildPersonaResponse)
 async def build_persona(req: BuildPersonaRequest):
     def _run():
-        persona_data = None
-        try:
-            messages = [
-                SystemMessage(content=_BUILD_SYSTEM),
-                HumanMessage(content=req.description),
-            ]
-            response = _llm.invoke(messages)
-            raw = response.content if isinstance(response.content, str) else str(response.content)
+        messages = [
+            SystemMessage(content=_BUILD_SYSTEM),
+            HumanMessage(content=req.description),
+        ]
+        response = _llm.invoke(messages)
+        raw = response.content if isinstance(response.content, str) else str(response.content)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
             raw = raw.strip()
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
-            persona_data = json.loads(raw)
-        except Exception:
-            import re
-            desc = req.description
-            name_match = re.search(r"(?:(?:Dr\.|Mr\.|Ms\.|Mrs\.)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)|(?:named?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?))", desc)
-            name = name_match.group(0).replace("named", "").replace("name is", "").strip() if name_match else ""
-            if not name:
-                first_token = desc.split(",")[0].split(".")[0].strip()
-                name = first_token if len(first_token) < 25 else "Persona"
-
-            age_match = re.search(r"\b(\d{2})(?:-year-old|yo|\s+years?\s+old|s)?\b", desc)
-            age = int(age_match.group(1)) if age_match else 35
-
-            occ = "Professional"
-            for candidate in [
-                "Cardiologist",
-                "Senior ML Engineer",
-                "Machine Learning Engineer",
-                "AI Researcher",
-                "Doctor",
-                "Software Engineer",
-                "Senior Manager",
-                "Student",
-                "Music Producer",
-                "Musician",
-                "Physician",
-            ]:
-                if candidate.lower() in desc.lower():
-                    occ = candidate
-                    break
-
-            traits: list[str] = []
-            trait_pool = ["analytical", "methodical", "skeptical", "enthusiastic", "technical", "patient", "protective", "passionate", "creative", "direct"]
-            for t in trait_pool:
-                if t in desc.lower():
-                    traits.append(t)
-            if not traits:
-                traits = ["analytical", "methodical", "pragmatic"]
-
-            persona_data = {
-                "name": name,
-                "age": age,
-                "occupation": occ,
-                "personality_traits": traits[:4],
-                "values": ["evidence", "safety", "professional excellence"],
-                "communication_style": "direct and clear, sometimes technical",
-                "emotional_triggers": ["unsupported claims", "feeling dismissed"],
-                "background": desc[:250],
-                "goals": ["validate claims rigorously", "reach a safe and productive decision"],
-            }
-
+        persona_data = json.loads(raw)
         persona_schema = PersonaSchema(**persona_data)
         persona = Persona(**persona_data)
         return BuildPersonaResponse(
@@ -309,4 +364,4 @@ async def build_persona(req: BuildPersonaRequest):
         raise HTTPException(
             status_code=422,
             detail=f"Could not parse persona from description: {exc}",
-        )
+        )

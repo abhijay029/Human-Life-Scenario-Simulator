@@ -4,13 +4,23 @@ from backend.agents.observer import analyse_dialogue
 from backend.simulation.engine import run_simulation
 
 
-def _run_branch(args: tuple) -> dict:
+def _run_branch(args: tuple, on_event=None, branch_id: str = "") -> dict:
     personas, scenario, decision_point, max_turns = args
+
+    def emit(event: dict):
+        if on_event:
+            on_event({
+                **event,
+                "branch_id": branch_id,
+                "branch_label": decision_point,
+            })
+
     dialogue_log = run_simulation(
         personas=personas,
         scenario=scenario,
         decision_point=decision_point,
         max_turns=max_turns,
+        on_event=emit,
     )
     analysis = analyse_dialogue(
         dialogue_log=dialogue_log,
@@ -31,6 +41,7 @@ def run_multiverse(
     decision_branches: list[str],
     max_turns: int = 6,
     max_workers: int = 3,
+    on_event=None,
 ) -> list[dict]:
     """
     Run each decision branch sequentially (safe for free-tier rate limits
@@ -38,13 +49,37 @@ def run_multiverse(
     goal success probability (descending).
     """
     results = []
-    for branch in decision_branches:
+    for branch_index, branch in enumerate(decision_branches):
+        branch_id = f"branch-{branch_index}"
         print(f"\n[Multiverse] Running branch: {branch[:60]}...")
+        if on_event:
+            on_event({
+                "type": "branch_started",
+                "branch_id": branch_id,
+                "branch_label": branch,
+            })
         try:
-            result = _run_branch((personas, scenario, branch, max_turns))
+            result = _run_branch(
+                (personas, scenario, branch, max_turns),
+                on_event=on_event,
+                branch_id=branch_id,
+            )
             results.append(result)
+            if on_event:
+                on_event({
+                    "type": "branch_completed",
+                    "branch_id": branch_id,
+                    "branch_label": branch,
+                })
         except Exception as exc:
             print(f"[Multiverse] Branch failed: {exc}")
+            if on_event:
+                on_event({
+                    "type": "branch_failed",
+                    "branch_id": branch_id,
+                    "branch_label": branch,
+                    "message": str(exc),
+                })
             results.append({
                 "decision_point": branch,
                 "dialogue_log": [],
@@ -79,29 +114,23 @@ def generate_comparison_report(multiverse_results: list[dict]) -> dict:
     scored = [(r, _avg(r)) for r in multiverse_results]
     scored.sort(key=lambda x: x[1])
 
-    worst = scored[0][0]
-    best = scored[-1][0]
+    worse = scored[0][0]
+    better = scored[-1][0]
     most_likely_idx = len(scored) // 2
     most_likely = scored[most_likely_idx][0]
 
     return {
-        "best_case": {
-            "decision_point": best["decision_point"],
-            "outcome_category": best["analysis"].get("outcome_category"),
-            "outcome_summary": best["analysis"].get("outcome_summary"),
+        "better_case": {
+            "decision_point": better["decision_point"],
+            "outcome_category": better["analysis"].get("outcome_category"),
+            "outcome_summary": better["analysis"].get("outcome_summary"),
             "avg_success_probability": round(scored[-1][1], 2),
         },
-        "worst_case": {
-            "decision_point": worst["decision_point"],
-            "outcome_category": worst["analysis"].get("outcome_category"),
-            "outcome_summary": worst["analysis"].get("outcome_summary"),
+        "worse_case": {
+            "decision_point": worse["decision_point"],
+            "outcome_category": worse["analysis"].get("outcome_category"),
+            "outcome_summary": worse["analysis"].get("outcome_summary"),
             "avg_success_probability": round(scored[0][1], 2),
-        },
-        "most_likely": {
-            "decision_point": most_likely["decision_point"],
-            "outcome_category": most_likely["analysis"].get("outcome_category"),
-            "outcome_summary": most_likely["analysis"].get("outcome_summary"),
-            "avg_success_probability": round(scored[most_likely_idx][1], 2),
         },
         "all_branches_ranked": [
             {

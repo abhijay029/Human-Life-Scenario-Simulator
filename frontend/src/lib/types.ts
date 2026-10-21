@@ -60,9 +60,8 @@ export interface BranchSummary {
 }
 
 export interface ComparisonReport {
-  best_case: BranchSummary & { outcome_summary?: string }
-  worst_case: BranchSummary & { outcome_summary?: string }
-  most_likely: BranchSummary & { outcome_summary?: string }
+  better_case: BranchSummary & { outcome_summary?: string }
+  worse_case: BranchSummary & { outcome_summary?: string }
   all_branches_ranked: BranchSummary[]
 }
 
@@ -71,6 +70,15 @@ export interface MultiverseResponse {
   branches: SimulationResponse[]
   comparison_report: ComparisonReport
 }
+
+export type SimulationStreamEvent =
+  | { type: 'simulation_started' }
+  | { type: 'status'; message: string }
+  | { type: 'branch_started' | 'branch_completed'; branch_id: string; branch_label: string }
+  | { type: 'branch_failed'; branch_id: string; branch_label: string; message: string }
+  | { type: 'dialogue_turn'; turn: number; speaker: string; message: string; branch_id?: string; branch_label?: string }
+  | { type: 'completed'; result: SimulationResponse | MultiverseResponse }
+  | { type: 'error'; message: string }
 
 // ── Character Builder ──────────────────────────────────────────────────────
 export interface BuildPersonaResponse {

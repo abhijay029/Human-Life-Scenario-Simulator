@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import type { SimMode } from '@/lib/types'
-import { useObserverStream } from '@/lib/useObserverStream'
-import { Activity, Wifi, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { clsx } from 'clsx'
+import type { DialogueTurn, SimMode } from '@/lib/types'
+import DialogueViewer from './DialogueViewer'
 
 const SINGLE_STEPS = [
   'Initialising persona agents…',
@@ -29,10 +27,14 @@ const MULTI_STEPS = [
 
 export default function SimulatingScreen({
   mode,
-  sessionId,
+  decisionPoint,
+  liveDialogue,
+  liveBranches,
 }: {
   mode: SimMode
-  sessionId?: string
+  decisionPoint: string
+  liveDialogue: DialogueTurn[]
+  liveBranches: Record<string, DialogueTurn[]>
 }) {
   const steps = mode === 'multiverse' ? MULTI_STEPS : SINGLE_STEPS
   const [currentStep, setCurrentStep] = useState(0)
@@ -170,6 +172,27 @@ export default function SimulatingScreen({
           </div>
         ))}
       </div>
+
+      {(liveDialogue.length > 0 || Object.keys(liveBranches).length > 0) && (
+        <div className="w-full max-w-3xl space-y-6 text-left">
+          {mode === 'single' ? (
+            <DialogueViewer
+              log={liveDialogue}
+              decisionPoint={decisionPoint}
+              label="Live dialogue"
+            />
+          ) : (
+            Object.entries(liveBranches).map(([branchId, log], index) => (
+              <DialogueViewer
+                key={branchId}
+                log={log}
+                decisionPoint={decisionPoint}
+                label={`Branch ${String.fromCharCode(65 + index)} · Live dialogue`}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

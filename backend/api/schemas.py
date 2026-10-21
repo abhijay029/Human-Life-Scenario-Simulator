@@ -96,9 +96,8 @@ class BranchSummary(BaseModel):
 
 
 class ComparisonReport(BaseModel):
-    best_case: dict
-    worst_case: dict
-    most_likely: dict
+    better_case: dict
+    worse_case: dict
     all_branches_ranked: list[BranchSummary]
 
 

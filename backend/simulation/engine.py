@@ -216,7 +216,7 @@ def should_continue(state: SimulationState) -> str:
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
-def build_simulation_graph(agents: dict[str, PersonaAgent]):
+def build_simulation_graph(agents: dict[str, PersonaAgent], on_event=None):
 
     def select_speaker(state: SimulationState) -> dict:
         # Turn cap reached: skip bidding entirely instead of paying for a round we'd discard
@@ -269,36 +269,13 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
         )
         counts = dict(state["turn_counts"])
         counts[name] = counts.get(name, 0) + 1
-
-        new_log = state["dialogue_log"] + [{"speaker": name, "message": reply}]
-
-        # ── Observer hook (non-blocking) ──────────────────────────────────────
-        # Only the public transcript (speaker name + message) is passed.
-        # No access to private persona memory, knowledge profiles, or system prompts.
-        session_id = state.get("session_id")
-        if session_id:
-            try:
-                from backend.observer.pipeline import get_pipeline
-                from backend.observer.schemas import TurnEvent
-                all_names = list(agents.keys())
-                listeners = [n for n in all_names if n != name]
-                event = TurnEvent(
-                    session_id=session_id,
-                    turn_index=state["current_turn"],
-                    speaker=name,
-                    listeners=listeners,
-                    message=reply,
-                    runtime="simulation",
-                )
-                get_pipeline().emit_turn_sync(event)
-            except Exception as _obs_exc:
-                # Observer errors must never block or crash the simulation
-                import logging as _log
-                _log.getLogger(__name__).warning(
-                    "Observer emit failed (non-fatal): %s", _obs_exc
-                )
-        # ──────────────────────────────────────────────────────────────────────
-
+        if on_event:
+            on_event({
+                "type": "dialogue_turn",
+                "turn": state["current_turn"] + 1,
+                "speaker": name,
+                "message": reply,
+            })
         return {
             "dialogue_log": new_log,
             "current_turn": state["current_turn"] + 1,
@@ -316,38 +293,17 @@ def build_simulation_graph(agents: dict[str, PersonaAgent]):
     return graph.compile()
 
 
-def run_simulation(
-    personas: list[Persona],
-    scenario: str,
-    decision_point: str,
-    max_turns: int = 4,
-    session_id: Optional[str] = None,
-) -> list[dict]:
-    """
-    Run a full simulation. If session_id is provided, the observer pipeline
-    will be auto-started and finalization will be triggered on completion.
+def run_simulation(personas: list[Persona], scenario: str,
+                   decision_point: str, max_turns: int = 4,
+                   on_event=None) -> list[dict]:
+    """Run a simulation and optionally emit completed dialogue turns.
+
+    ``on_event`` is deliberately called only after a persona has produced a
+    complete response, so existing callers remain unchanged and consumers do
+    not have to assemble partial messages.
     """
     agents = build_agents(personas)
-
-    # Register and start observer pipeline for this session
-    if session_id:
-        try:
-            from backend.observer.pipeline import get_pipeline
-            pipeline = get_pipeline()
-            participant_names = [p.name for p in personas]
-            pipeline.get_or_create_session(
-                session_id,
-                participants=participant_names,
-                scenario_description=scenario,
-            )
-            pipeline.start_worker(session_id)
-        except Exception as _obs_exc:
-            import logging as _log
-            _log.getLogger(__name__).warning(
-                "Observer pipeline setup failed (non-fatal): %s", _obs_exc
-            )
-
-    graph = build_simulation_graph(agents)
+    graph = build_simulation_graph(agents, on_event=on_event)
     initial_state: SimulationState = {
         "scenario": scenario,
         "personas": [p.model_dump() for p in personas],
@@ -361,16 +317,4 @@ def run_simulation(
         "session_id": session_id,
     }
     final_state = graph.invoke(initial_state)
-
-    # Trigger observer finalization (non-blocking sentinel enqueue)
-    if session_id:
-        try:
-            from backend.observer.pipeline import get_pipeline
-            get_pipeline().finalize_session_sync(session_id)
-        except Exception as _obs_exc:
-            import logging as _log
-            _log.getLogger(__name__).warning(
-                "Observer finalize failed (non-fatal): %s", _obs_exc
-            )
-
     return final_state["dialogue_log"]
