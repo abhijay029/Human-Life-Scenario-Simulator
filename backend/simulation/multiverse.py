@@ -114,29 +114,23 @@ def generate_comparison_report(multiverse_results: list[dict]) -> dict:
     scored = [(r, _avg(r)) for r in multiverse_results]
     scored.sort(key=lambda x: x[1])
 
-    worst = scored[0][0]
-    best = scored[-1][0]
+    worse = scored[0][0]
+    better = scored[-1][0]
     most_likely_idx = len(scored) // 2
     most_likely = scored[most_likely_idx][0]
 
     return {
-        "best_case": {
-            "decision_point": best["decision_point"],
-            "outcome_category": best["analysis"].get("outcome_category"),
-            "outcome_summary": best["analysis"].get("outcome_summary"),
+        "better_case": {
+            "decision_point": better["decision_point"],
+            "outcome_category": better["analysis"].get("outcome_category"),
+            "outcome_summary": better["analysis"].get("outcome_summary"),
             "avg_success_probability": round(scored[-1][1], 2),
         },
-        "worst_case": {
-            "decision_point": worst["decision_point"],
-            "outcome_category": worst["analysis"].get("outcome_category"),
-            "outcome_summary": worst["analysis"].get("outcome_summary"),
+        "worse_case": {
+            "decision_point": worse["decision_point"],
+            "outcome_category": worse["analysis"].get("outcome_category"),
+            "outcome_summary": worse["analysis"].get("outcome_summary"),
             "avg_success_probability": round(scored[0][1], 2),
-        },
-        "most_likely": {
-            "decision_point": most_likely["decision_point"],
-            "outcome_category": most_likely["analysis"].get("outcome_category"),
-            "outcome_summary": most_likely["analysis"].get("outcome_summary"),
-            "avg_success_probability": round(scored[most_likely_idx][1], 2),
         },
         "all_branches_ranked": [
             {
