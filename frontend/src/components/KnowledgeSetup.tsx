@@ -36,7 +36,9 @@ interface KnowledgeSetupProps {
 }
 
 const LEVELS: Level[] = ['layperson', 'basic', 'advanced', 'expert']
-const FACT_LEVELS: Level[] = ['layperson', 'basic', 'advanced', 'expert']
+const FACT_LEVELS: Level[] = ['advanced', 'expert']
+const isWebResearchable = (topic: KLTopic) =>
+  Object.values(topic.levels).some((level) => level === 'advanced' || level === 'expert')
 
 export default function KnowledgeSetup({
   personas,
@@ -110,7 +112,7 @@ export default function KnowledgeSetup({
     started.current = true
     if (!cacheHit) {
       handleGenerateTopics()
-    } else if (topics.length > 0 && topics.some((topic) => !topic.brief?.grounded)) {
+    } else if (topics.some((topic) => isWebResearchable(topic) && !topic.brief?.grounded)) {
       handleResearchTopics(topics)
     }
   }, [])
@@ -126,20 +128,16 @@ export default function KnowledgeSetup({
   const [newTopicConcepts, setNewTopicConcepts] = useState('')
 
   const handleLevelChange = (topicId: string, personaId: string, level: Level) => {
-    setTopics((prev) =>
-      prev.map((t) => {
-        if (t.id === topicId) {
-          return {
-            ...t,
-            levels: {
-              ...t.levels,
-              [personaId]: level,
-            },
-          }
-        }
-        return t
-      })
-    )
+    const currentTopic = topics.find((topic) => topic.id === topicId)
+    if (!currentTopic) return
+    const updatedTopic = {
+      ...currentTopic,
+      levels: { ...currentTopic.levels, [personaId]: level },
+    }
+    setTopics((prev) => prev.map((topic) => topic.id === topicId ? updatedTopic : topic))
+    if (isWebResearchable(updatedTopic) && !updatedTopic.brief?.grounded) {
+      handleResearchTopics([updatedTopic])
+    }
   }
 
   const handleBulkSetNonDomain = (persona: KLPersona) => {
@@ -159,15 +157,18 @@ export default function KnowledgeSetup({
     )
   }
 
-  // Research each shared topic once; facts are filtered by persona level at chat time.
-  const researchable = topics
+  // Only topics with advanced/expert personas need web research.
+  const researchable = topics.filter(isWebResearchable)
 
   const handleResearchTopics = async (topicsToResearch: KLTopic[]) => {
+    const eligibleTopics = topicsToResearch.filter(isWebResearchable)
+    if (eligibleTopics.length === 0) return
+
     setResearching(true)
     setError('')
     setResearchNote('')
     try {
-      const res = await generateKLBriefs(topicsToResearch)
+      const res = await generateKLBriefs(eligibleTopics)
       const ids = Object.keys(res.briefs)
       persist.current = true
       setTopics((prev) => prev.map((t) => (res.briefs[t.id] ? { ...t, brief: res.briefs[t.id] } : t)))
@@ -244,7 +245,7 @@ export default function KnowledgeSetup({
     }
 
     setTopics((prev) => [...prev, newTopic])
-    handleResearchTopics([newTopic])
+    if (isWebResearchable(newTopic)) handleResearchTopics([newTopic])
     setNewTopicName('')
     setNewTopicDomain('')
     setNewTopicConcepts('')
@@ -282,8 +283,8 @@ export default function KnowledgeSetup({
             Review and fine-tune what each persona is allowed to know. Default is layperson outside their field.
           </p>
           <p className="text-xs text-text-dim mt-0.5">
-            Objective topics are researched once during setup. Sourced facts are tagged by knowledge level
-            and filtered for each persona during chat. Search uses topic names and concepts, not the scenario.
+            Advanced/expert topics get sourced facts from web search. Layperson/basic personas use the LLM&apos;s
+            general knowledge with level-specific instructions. Search uses topic names and concepts, not the scenario.
           </p>
         </div>
 
@@ -292,7 +293,7 @@ export default function KnowledgeSetup({
             onClick={handleResearchBriefs}
             disabled={researchable.length === 0 || generating || researching || loading || running}
             className="text-xs font-mono bg-cyan/15 border border-cyan/40 text-cyan hover:bg-cyan/30 px-3.5 py-1.5 rounded flex items-center gap-1.5 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-            title={`Search the web for shared, level-tagged facts across ${researchable.length} topic${researchable.length === 1 ? '' : 's'}`}
+            title={`Search the web for advanced/expert facts across ${researchable.length} topic${researchable.length === 1 ? '' : 's'}`}
           >
             {researching ? (
               <>
@@ -300,7 +301,7 @@ export default function KnowledgeSetup({
               </>
             ) : (
               <>
-                <Search size={13} className="text-cyan" /> Research Topics Again
+                <Search size={13} className="text-cyan" /> Research Advanced/Expert Again
               </>
             )}
           </button>

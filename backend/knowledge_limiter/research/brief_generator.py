@@ -36,6 +36,7 @@ MAX_FACTS_PER_TOPIC = 8
 MIN_FACT_CHARS = 15
 MAX_FACT_CHARS = 300
 MAX_WORKERS = 3
+WEB_RESEARCH_LEVELS = {Level.advanced, Level.expert}
 
 
 class _RawFact(BaseModel):
@@ -54,10 +55,12 @@ class BriefGenerationResult(BaseModel):
 
 
 def _clean_facts(raw: list[_RawFact]) -> list[BriefFact]:
-    """Normalize extracted facts and preserve their minimum knowledge tier."""
+    """Keep only sourced facts intended for advanced or expert personas."""
     facts: list[BriefFact] = []
     seen: set[str] = set()
     for item in raw:
+        if item.min_level not in WEB_RESEARCH_LEVELS:
+            continue
         text = " ".join(item.text.split())
         if not (MIN_FACT_CHARS <= len(text) <= MAX_FACT_CHARS):
             continue
@@ -86,7 +89,7 @@ class BriefGenerator:
     @staticmethod
     def _cache_key(topic: Topic) -> str:
         concepts = ",".join(sorted(c.term.strip().lower() for c in topic.concepts))
-        raw = f"knowledge-brief-v2|{topic.name.strip().lower()}|{topic.domain.strip().lower()}|{concepts}"
+        raw = f"knowledge-brief-v3|{topic.name.strip().lower()}|{topic.domain.strip().lower()}|{concepts}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     @staticmethod
@@ -159,10 +162,14 @@ class BriefGenerator:
     # -------------------------------------------------------------- public API
 
     def generate(self, topics: list[Topic]) -> BriefGenerationResult:
-        """Research shared knowledge briefs for all selected topics, regardless of persona level."""
-        chosen = topics[:MAX_RESEARCHED_TOPICS]
+        """Research topics that have at least one advanced or expert persona."""
+        eligible = [
+            topic for topic in topics
+            if any(level in WEB_RESEARCH_LEVELS for level in topic.levels.values())
+        ]
+        chosen = eligible[:MAX_RESEARCHED_TOPICS]
         chosen_ids = {t.id for t in chosen}
-        result = BriefGenerationResult(skipped=[t.id for t in topics if t.id not in chosen_ids])
+        result = BriefGenerationResult(skipped=[t.id for t in eligible if t.id not in chosen_ids])
 
         to_research: list[Topic] = []
         for topic in chosen:

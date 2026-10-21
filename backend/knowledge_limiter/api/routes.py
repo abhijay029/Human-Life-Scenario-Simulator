@@ -97,9 +97,15 @@ def save_knowledge_config(req: SaveConfigRequest):
                 per_persona[persona_id][topic.domain] = level
 
             # Merge reviewed brief facts by domain (keep the higher level for duplicates)
-            if topic.brief and topic.brief.grounded:
+            has_advanced_or_expert_persona = any(
+                level in {Level.advanced, Level.expert}
+                for level in topic.levels.values()
+            )
+            if topic.brief and topic.brief.grounded and has_advanced_or_expert_persona:
                 bucket = expert_briefs.setdefault(topic.domain, {})
                 for fact in topic.brief.facts:
+                    if fact.min_level not in {Level.advanced, Level.expert}:
+                        continue
                     text = fact.text.strip()
                     if not text:
                         continue
