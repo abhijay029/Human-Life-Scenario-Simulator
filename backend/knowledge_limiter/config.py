@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     # Caching
     TOPIC_CACHE_DIR: str = ".cache/kl_topics"
+    BRIEF_CACHE_DIR: str = ".cache/kl_briefs"
+    BRIEF_CACHE_TTL_HOURS: int = 168  # web-sourced facts go stale; re-research after a week
 
     # Feature flags
     ENABLE_CONCEPT_LEARNING: bool = True

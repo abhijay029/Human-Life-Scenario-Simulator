@@ -3,6 +3,7 @@ FastAPI Routes for Knowledge Limiter.
 
 Endpoints:
 - POST /kl/topics/generate: returns suggested topics and per-persona levels.
+- POST /kl/briefs/generate: researches expert briefs (web-grounded) for advanced/expert topics.
 - POST /kl/config/save: compiles confirmed topics and per-persona levels into KnowledgeConfig with flattened concept lexicon.
 - POST /kl/chat/{persona_id}: executes full runtime pipeline (router -> generator -> verifier with retry).
 """
@@ -14,18 +15,23 @@ from fastapi import APIRouter, HTTPException
 from .schemas import (
     GenerateTopicsRequest,
     GenerateTopicsResponse,
+    GenerateBriefsRequest,
+    GenerateBriefsResponse,
     SaveConfigRequest,
     SaveConfigResponse,
     KLChatRequest,
     KLChatResponse,
 )
 from ..schemas.models import (
+    BriefFact,
     KnowledgeConfig,
     ConceptLexiconEntry,
     Level,
 )
+from ..schemas.constants import LEVEL_ORDER
 from ..llm_client import LLMClient
 from ..topic_generation.generator import TopicGenerator, TopicGenerationInput
+from ..research.brief_generator import BriefGenerator
 from ..router.classifier import MessageRouter
 from ..generation.persona_generator import PersonaGenerator, ConversationTurn
 from ..verification.verifier import OutputVerifier
@@ -37,6 +43,7 @@ router = APIRouter(prefix="/kl", tags=["Knowledge Limiter"])
 # Shared service instances
 _llm_client = LLMClient()
 _topic_generator = TopicGenerator(_llm_client)
+_brief_generator = BriefGenerator(_llm_client)
 _router = MessageRouter(_llm_client)
 _generator = PersonaGenerator(_llm_client)
 _verifier = OutputVerifier(_llm_client)
@@ -59,12 +66,28 @@ def generate_topics(req: GenerateTopicsRequest):
         raise HTTPException(status_code=500, detail=f"Topic generation failed: {exc}")
 
 
+@router.post("/briefs/generate", response_model=GenerateBriefsResponse)
+def generate_briefs(req: GenerateBriefsRequest):
+    """Research expert briefs for topics where some persona is advanced/expert.
+
+    Only each topic's name, domain and key concepts are used for the web search — never
+    the scenario text or persona details.
+    """
+    try:
+        out = _brief_generator.generate(req.topics)
+        return GenerateBriefsResponse(briefs=out.briefs, errors=out.errors, skipped=out.skipped)
+    except Exception as exc:
+        logger.exception("Brief generation failed")
+        raise HTTPException(status_code=500, detail=f"Brief generation failed: {exc}")
+
+
 @router.post("/config/save", response_model=SaveConfigResponse)
 def save_knowledge_config(req: SaveConfigRequest):
     """Compile reviewed topics and personas into a final KnowledgeConfig."""
     try:
         per_persona: dict[str, dict[str, Level]] = {p.id: {} for p in req.personas}
         concept_lexicon: dict[str, ConceptLexiconEntry] = {}
+        expert_briefs: dict[str, dict[str, BriefFact]] = {}  # domain -> {fact_text_lower: fact}
 
         for topic in req.topics:
             # Map levels per persona for this domain
@@ -73,12 +96,22 @@ def save_knowledge_config(req: SaveConfigRequest):
                     per_persona[persona_id] = {}
                 per_persona[persona_id][topic.domain] = level
 
+            # Merge reviewed brief facts by domain (keep the higher level for duplicates)
+            if topic.brief:
+                bucket = expert_briefs.setdefault(topic.domain, {})
+                for fact in topic.brief.facts:
+                    text = fact.text.strip()
+                    if not text:
+                        continue
+                    fkey = text.lower()
+                    prev = bucket.get(fkey)
+                    if prev is None or LEVEL_ORDER[fact.min_level] > LEVEL_ORDER[prev.min_level]:
+                        bucket[fkey] = BriefFact(text=text, min_level=fact.min_level)
+
             # Flatten concepts into concept_lexicon
             for c in topic.concepts:
                 term_key = c.term.strip().lower()
                 # If term exists, keep the higher level
-                from ..schemas.constants import LEVEL_ORDER
-
                 existing = concept_lexicon.get(term_key)
                 if existing is None or LEVEL_ORDER[c.min_level] > LEVEL_ORDER[existing.min_level]:
                     concept_lexicon[term_key] = ConceptLexiconEntry(
@@ -95,6 +128,7 @@ def save_knowledge_config(req: SaveConfigRequest):
             scenario_id=req.scenario_id,
             per_persona=per_persona,
             concept_lexicon=concept_lexicon,
+            expert_briefs={d: list(facts.values()) for d, facts in expert_briefs.items() if facts},
         )
         return SaveConfigResponse(knowledge_config=config)
     except Exception as exc:
@@ -125,7 +159,8 @@ def chat_with_persona(persona_id: str, req: KLChatRequest):
             tone=req.tone,
         )
 
-        # 2. Generate
+        # 2. Generate (expert-brief facts are filtered by this persona's level per domain)
+        brief_domains = route_res.classification.domains or [route_res.classification.primary_domain]
         gen_res = _generator.generate(
             persona=req.target_persona,
             knowledge_config=req.knowledge_config,
@@ -133,6 +168,8 @@ def chat_with_persona(persona_id: str, req: KLChatRequest):
             tone=req.tone,
             response_mode=route_res.response_mode,
             history=conv_turns,
+            domains=brief_domains,
+            focus_message=req.message,
         )
         reply = gen_res.reply
 
@@ -161,6 +198,8 @@ def chat_with_persona(persona_id: str, req: KLChatRequest):
                     tone=req.tone,
                     response_mode=route_res.response_mode,
                     history=conv_turns,
+                    domains=brief_domains,
+                    focus_message=req.message,
                 )
                 reply = gen_res.reply
                 ver_res = _verifier.verify(

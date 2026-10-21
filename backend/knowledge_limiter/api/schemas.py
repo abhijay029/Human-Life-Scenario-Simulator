@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from ..schemas.models import (
     KLPersona,
     Topic,
+    TopicBrief,
     KnowledgeConfig,
     ResponseMode,
     Tone,
@@ -28,6 +29,16 @@ class GenerateTopicsRequest(BaseModel):
 
 class GenerateTopicsResponse(BaseModel):
     topics: list[Topic]
+
+
+class GenerateBriefsRequest(BaseModel):
+    topics: list[Topic]
+
+
+class GenerateBriefsResponse(BaseModel):
+    briefs: dict[str, TopicBrief]  # topic_id -> brief
+    errors: dict[str, str] = {}
+    skipped: list[str] = []
 
 
 class SaveConfigRequest(BaseModel):

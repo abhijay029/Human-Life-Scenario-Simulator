@@ -17,6 +17,7 @@ from typing import Optional
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..schemas.models import KLPersona, KnowledgeConfig, ResponseMode, Tone
+from ..schemas.helpers import select_brief_facts
 from ..llm_client import LLMClient
 from ..config import settings
 from .response_mode_instructions import get_response_mode_instruction
@@ -84,12 +85,18 @@ class PersonaGenerator:
         response_mode: ResponseMode,
         history: list[ConversationTurn],
         model: Optional[str] = None,
+        domains: Optional[list[str]] = None,
+        focus_message: str = "",
     ) -> PersonaGenerationResult:
         t0 = time.monotonic()
 
         knowledge_desc = self._build_knowledge_description(persona, knowledge_config)
         mode_instruction = get_response_mode_instruction(response_mode, persona.own_domain)
         history_text = self._build_history(history)
+        # Only facts at or below this persona's level in each domain are ever included.
+        expert_notes = select_brief_facts(
+            persona, knowledge_config, domains or [], focus=focus_message
+        )
 
         template = self._jinja_env.get_template("persona_speak.jinja2")
         prompt = template.render(
@@ -99,6 +106,7 @@ class PersonaGenerator:
             tone=tone.value,
             response_mode_instruction=mode_instruction,
             conversation_history=history_text,
+            expert_notes=expert_notes,
         )
 
         messages = [{"role": "user", "content": prompt}]

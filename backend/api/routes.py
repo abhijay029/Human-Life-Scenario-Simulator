@@ -69,6 +69,16 @@ async def simulate(req: RunSimulationRequest):
 
     session_id = req.session_id or f"sim_{uuid.uuid4().hex[:12]}"
     loop = asyncio.get_running_loop()
+    lock_released = threading.Event()
+
+    def _release_sim_lock():
+        # The worker normally releases the lock. If dispatch fails before the
+        # worker starts, the request handler releases it instead. Keep this
+        # idempotent because an exception from the worker also reaches the
+        # handler's except block.
+        if not lock_released.is_set():
+            lock_released.set()
+            _sim_lock.release()
 
     # Pre-register observer session and start async worker directly on main event loop
     try:
@@ -124,7 +134,7 @@ async def simulate(req: RunSimulationRequest):
                 session_id=session_id,
             )
         finally:
-            _sim_lock.release()
+            _release_sim_lock()
             # del mem
 
     try:
@@ -132,7 +142,7 @@ async def simulate(req: RunSimulationRequest):
         result = await loop.run_in_executor(_executor, _run)
         return result
     except Exception as exc:
-        _sim_lock.release()
+        _release_sim_lock()
         raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}")
 
 
@@ -145,6 +155,13 @@ async def multiverse(req: RunMultiverseRequest):
             status_code=429,
             detail="A simulation is already running. Please wait for it to finish."
         )
+
+    lock_released = threading.Event()
+
+    def _release_sim_lock():
+        if not lock_released.is_set():
+            lock_released.set()
+            _sim_lock.release()
 
     def _run():
         try:
@@ -181,14 +198,14 @@ async def multiverse(req: RunMultiverseRequest):
                 comparison_report=comparison,
             )
         finally:
-            _sim_lock.release()
+            _release_sim_lock()
 
     try:
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(_executor, _run)
         return result
     except Exception as exc:
-        _sim_lock.release()
+        _release_sim_lock()
         raise HTTPException(status_code=500, detail=f"Multiverse failed: {exc}")
 
 

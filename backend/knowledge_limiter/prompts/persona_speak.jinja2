@@ -7,6 +7,10 @@ Background: {{ persona.background_summary }}
 
 WHAT YOU KNOW:
 {{ knowledge_description }}
+{% if expert_notes %}
+THINGS YOU KNOW FROM YOUR WORK (background only — bring one up only if it genuinely fits what was just said, in your own words; never recite them, and never mention notes, searching, or looking anything up):
+{% for note in expert_notes %}- {{ note }}
+{% endfor %}{% endif %}
 
 SCENARIO: {{ scenario_description }}
 TONE: {{ tone }}

@@ -111,6 +111,48 @@ def _complete_structured_via_ollama(
     return structured_llm.invoke(lc_msgs)
 
 
+def _content_to_text(content: Any) -> str:
+    """Flatten a LangChain message ``content`` (str or list of parts) into plain text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+        return "".join(parts)
+    return str(content)
+
+
+def _extract_grounding_sources(response: Any) -> list[dict[str, str]]:
+    """Pull de-duplicated web sources out of Gemini grounding metadata (snake or camel case)."""
+    meta = getattr(response, "response_metadata", None) or {}
+    grounding = meta.get("grounding_metadata") or meta.get("groundingMetadata") or {}
+    if not isinstance(grounding, dict):
+        return []
+    chunks = grounding.get("grounding_chunks") or grounding.get("groundingChunks") or []
+    sources: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for chunk in chunks:
+        web = (chunk or {}).get("web") or {}
+        url = web.get("uri") or web.get("url")
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        sources.append({"title": web.get("title") or "", "url": url})
+    return sources
+
+
+class GroundedResult(BaseModel):
+    """Text from a search-grounded completion plus the sources that backed it."""
+
+    text: str
+    sources: list[dict[str, str]] = []
+    grounded: bool = False  # True only if Gemini returned web sources for this answer
+
+
 def _messages_to_lc(messages: list[dict[str, str]]) -> list[Any]:
     """Convert a list of ``{"role": ..., "content": ...}`` dicts to LangChain message objects."""
     try:
@@ -229,3 +271,49 @@ class LLMClient:
         # Fallback to local Ollama
         return _complete_structured_via_ollama(messages, output_schema, temperature=eff_temp)
 
+    def complete_grounded(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float | None = None,
+    ) -> GroundedResult:
+        """Completion with Gemini's Google Search tool enabled.
+
+        Returns the text plus the web sources it was grounded on. If grounding is
+        unavailable (no keys, tool unsupported, call failed) it falls back to a plain
+        completion and reports ``grounded=False`` — callers must not present such
+        output as web-verified.
+        """
+        effective_model = model or settings.MAIN_MODEL
+        eff_temp = 0.2 if temperature is None else temperature
+        keys = get_gemini_keys()
+
+        if keys:
+            num_keys = len(keys)
+            for attempt in range(num_keys):
+                idx = (self._key_index + attempt) % num_keys
+                try:
+                    llm = _build_gemini_llm(effective_model, api_key=keys[idx], temperature=eff_temp)
+                    searching_llm = llm.bind_tools([{"google_search": {}}])
+                    response = searching_llm.invoke(_messages_to_lc(messages))
+                    self._key_index = idx
+                    text = _content_to_text(response.content).strip()
+                    if not text:
+                        raise ValueError("Grounded completion returned no text")
+                    sources = _extract_grounding_sources(response)
+                    return GroundedResult(text=text, sources=sources, grounded=bool(sources))
+                except Exception as exc:
+                    if _is_quota_or_rate_limit_error(exc) and attempt < num_keys - 1:
+                        logger.warning(
+                            "Gemini key [%d/%d] exhausted during grounded call (%s). Rotating...",
+                            idx + 1, num_keys, exc,
+                        )
+                        continue
+                    logger.warning("Grounded Gemini call failed (%s). Falling back to ungrounded.", exc)
+                    break
+
+        return GroundedResult(
+            text=self.complete(messages, model=model, temperature=temperature),
+            sources=[],
+            grounded=False,
+        )

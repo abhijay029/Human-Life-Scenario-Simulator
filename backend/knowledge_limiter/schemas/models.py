@@ -61,6 +61,38 @@ class Concept(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Expert briefs — field knowledge a persona may draw on, gated by Level
+# ---------------------------------------------------------------------------
+
+class BriefFact(BaseModel):
+    """One self-contained fact an expert in the field would know.
+
+    ``min_level`` is the lowest persona level allowed to use it:
+    basic = widely known, advanced = established practice,
+    expert = recent developments / niche practitioner knowledge.
+    """
+
+    text: str
+    min_level: Level = Level.advanced
+
+
+class BriefSource(BaseModel):
+    title: str = ""
+    url: str
+
+
+class TopicBrief(BaseModel):
+    """Researched background for a topic, reviewable by the user before use."""
+
+    facts: list[BriefFact] = Field(default_factory=list)
+    sources: list[BriefSource] = Field(default_factory=list)
+    grounded: bool = Field(
+        False,
+        description="True only if web search results backed this brief.",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Topic
 # ---------------------------------------------------------------------------
 
@@ -74,6 +106,9 @@ class Topic(BaseModel):
     levels: dict[str, Level] = Field(
         default_factory=dict,
         description="Mapping of persona_id (str) → Level for this topic.",
+    )
+    brief: Optional[TopicBrief] = Field(
+        None, description="Optional researched expert brief for this topic."
     )
 
 
@@ -118,6 +153,11 @@ class KnowledgeConfig(BaseModel):
     concept_lexicon: dict[str, ConceptLexiconEntry] = Field(
         default_factory=dict,
         description="Concept lexicon mapping lowercase term → domain & min_level.",
+    )
+    # { domain: [BriefFact] } — compiled from the reviewed topic briefs.
+    expert_briefs: dict[str, list[BriefFact]] = Field(
+        default_factory=dict,
+        description="Per-domain expert facts; a persona only sees facts at or below its level.",
     )
 
 

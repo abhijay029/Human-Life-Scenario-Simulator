@@ -7,10 +7,11 @@ import {
   KnowledgeConfig,
   saveKnowledgeConfig,
   generateKLTopics,
+  generateKLBriefs,
 } from '@/lib/knowledgeLimiterApi'
 import type { SimMode } from '@/lib/types'
 import { Button } from './ui'
-import { Plus, Trash2, Sparkles, BookOpen, Loader2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Sparkles, BookOpen, Loader2, Pencil, Search, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface KnowledgeSetupProps {
   personas: KLPersona[]
@@ -35,6 +36,9 @@ interface KnowledgeSetupProps {
 }
 
 const LEVELS: Level[] = ['layperson', 'basic', 'advanced', 'expert']
+const FACT_LEVELS: Level[] = ['basic', 'advanced', 'expert']
+
+const isAdvancedOrExpert = (l: Level) => l === 'advanced' || l === 'expert'
 
 export default function KnowledgeSetup({
   personas,
@@ -60,6 +64,9 @@ export default function KnowledgeSetup({
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(!cacheHit)
   const [error, setError] = useState('')
+  const [researching, setResearching] = useState(false)
+  const [researchNote, setResearchNote] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const persist = useRef(cacheHit)
   const started = useRef(false)
 
@@ -87,6 +94,8 @@ export default function KnowledgeSetup({
         })
         persist.current = true
         setTopics(remapped)
+        setExpanded({})
+        setResearchNote('')
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to generate topics')
@@ -144,6 +153,61 @@ export default function KnowledgeSetup({
         }
         return t
       })
+    )
+  }
+
+  // Topics where at least one persona is advanced/expert are worth researching.
+  const researchable = topics.filter((t) => Object.values(t.levels).some(isAdvancedOrExpert))
+
+  const handleResearchBriefs = async () => {
+    setResearching(true)
+    setError('')
+    setResearchNote('')
+    try {
+      const res = await generateKLBriefs(researchable)
+      const ids = Object.keys(res.briefs)
+      persist.current = true
+      setTopics((prev) => prev.map((t) => (res.briefs[t.id] ? { ...t, brief: res.briefs[t.id] } : t)))
+      const web = ids.filter((id) => res.briefs[id].grounded).length
+      const failed = Object.keys(res.errors).length
+      const parts = [`Researched ${ids.length} topic${ids.length === 1 ? '' : 's'}`]
+      if (ids.length > 0) parts.push(`${web} backed by web sources, ${ids.length - web} from model knowledge only`)
+      if (failed > 0) parts.push(`${failed} failed`)
+      setResearchNote(parts.join(' — ') + '. Review the briefs below before confirming.')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to research briefs')
+    } finally {
+      setResearching(false)
+    }
+  }
+
+  const updateBriefFact = (
+    topicId: string,
+    index: number,
+    patch: Partial<{ text: string; min_level: Level }>
+  ) => {
+    setTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId && t.brief
+          ? {
+              ...t,
+              brief: {
+                ...t.brief,
+                facts: t.brief.facts.map((f, i) => (i === index ? { ...f, ...patch } : f)),
+              },
+            }
+          : t
+      )
+    )
+  }
+
+  const removeBriefFact = (topicId: string, index: number) => {
+    setTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId && t.brief
+          ? { ...t, brief: { ...t.brief, facts: t.brief.facts.filter((_, i) => i !== index) } }
+          : t
+      )
     )
   }
 
@@ -210,12 +274,36 @@ export default function KnowledgeSetup({
           <p className="text-xs text-text-dim mt-1">
             Review and fine-tune what each persona is allowed to know. Default is layperson outside their field.
           </p>
+          <p className="text-xs text-text-dim mt-0.5">
+            Optional: research expert briefs for advanced and expert topics. The search uses only topic
+            names and key concepts; your scenario text is not sent.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
+            onClick={handleResearchBriefs}
+            disabled={researchable.length === 0 || generating || researching || loading || running}
+            className="text-xs font-mono bg-cyan/15 border border-cyan/40 text-cyan hover:bg-cyan/30 px-3.5 py-1.5 rounded flex items-center gap-1.5 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            title={
+              researchable.length === 0
+                ? 'No topic has an advanced or expert persona to research'
+                : `Search the web for background that advanced and expert personas can draw on (${researchable.length} topic${researchable.length === 1 ? '' : 's'})`
+            }
+          >
+            {researching ? (
+              <>
+                <Loader2 size={13} className="animate-spin text-cyan" /> Researching...
+              </>
+            ) : (
+              <>
+                <Search size={13} className="text-cyan" /> Research Expert Briefs
+              </>
+            )}
+          </button>
+          <button
             onClick={handleGenerateTopics}
-            disabled={generating || loading || running}
+            disabled={generating || researching || loading || running}
             className="text-xs font-mono bg-cyan/15 border border-cyan/40 text-cyan hover:bg-cyan/30 px-3.5 py-1.5 rounded flex items-center gap-1.5 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
             title="Generate 8-12 topics customized to this scenario and persona professions"
           >
@@ -235,6 +323,12 @@ export default function KnowledgeSetup({
       {(error || runError) && (
         <div className="mb-4 p-3 bg-red-alert/10 border border-red-alert/30 rounded text-xs font-mono text-red-alert">
           ⚠ {error || runError}
+        </div>
+      )}
+
+      {researchNote && (
+        <div className="mb-4 p-3 bg-cyan/10 border border-cyan/30 rounded text-xs font-mono text-cyan">
+          {researchNote}
         </div>
       )}
 
@@ -314,7 +408,8 @@ export default function KnowledgeSetup({
               </tr>
             )}
             {topics.map((t) => (
-              <tr key={t.id} className="hover:bg-cyan/5 transition-colors">
+              <React.Fragment key={t.id}>
+              <tr className="hover:bg-cyan/5 transition-colors">
                 <td className="p-3">
                   <div className="font-semibold text-text-primary">{t.name}</div>
                   <div className="text-[10px] text-text-dim mt-0.5">
@@ -327,6 +422,17 @@ export default function KnowledgeSetup({
                       </span>
                     ))}
                   </div>
+                  {t.brief && t.brief.facts.length > 0 && (
+                    <button
+                      onClick={() => setExpanded((prev) => ({ ...prev, [t.id]: !prev[t.id] }))}
+                      className="mt-1.5 text-[10px] font-mono text-cyan hover:text-text-primary flex items-center gap-1 transition"
+                      aria-expanded={!!expanded[t.id]}
+                    >
+                      {expanded[t.id] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                      Expert brief: {t.brief.facts.length} fact{t.brief.facts.length === 1 ? '' : 's'}
+                      {t.brief.grounded ? ' (web-sourced)' : ' (model knowledge only)'}
+                    </button>
+                  )}
                 </td>
                 <td className="p-3 font-mono text-[11px] text-text-dim">
                   <span className="px-2 py-0.5 rounded bg-border/30 border border-border/50">
@@ -363,6 +469,64 @@ export default function KnowledgeSetup({
                   </button>
                 </td>
               </tr>
+              {expanded[t.id] && t.brief && (
+                <tr className="bg-black/20">
+                  <td colSpan={personas.length + 3} className="p-4">
+                    <p className="text-[10px] text-text-dim mb-3">
+                      Each persona only uses facts at or below their own level for this topic. Edit, re-level
+                      or delete anything that looks wrong.
+                    </p>
+                    <div className="space-y-2">
+                      {t.brief.facts.map((f, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <select
+                            value={f.min_level}
+                            onChange={(e) => updateBriefFact(t.id, i, { min_level: e.target.value as Level })}
+                            className="bg-black/40 border border-border rounded px-2 py-1 text-xs font-mono text-text-primary focus:border-cyan outline-none"
+                            aria-label="Minimum level for this fact"
+                          >
+                            {FACT_LEVELS.map((lvl) => (
+                              <option key={lvl} value={lvl}>
+                                {lvl}
+                              </option>
+                            ))}
+                          </select>
+                          <textarea
+                            value={f.text}
+                            rows={2}
+                            onChange={(e) => updateBriefFact(t.id, i, { text: e.target.value })}
+                            className="flex-1 bg-black/30 border border-border rounded px-2 py-1 text-xs text-text-primary outline-none focus:border-cyan resize-y"
+                          />
+                          <button
+                            onClick={() => removeBriefFact(t.id, i)}
+                            className="text-text-dim hover:text-red-alert p-1 rounded transition"
+                            title="Remove fact"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {t.brief.sources.length > 0 && (
+                      <div className="mt-3 text-[10px] text-text-dim">
+                        Sources:{' '}
+                        {t.brief.sources.map((src, i) => (
+                          <a
+                            key={src.url}
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan hover:underline mr-2"
+                          >
+                            {src.title || `source ${i + 1}`}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -435,13 +599,13 @@ export default function KnowledgeSetup({
             ← Back
           </Button>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => onRun()} disabled={loading || running || generating}>
+            <Button variant="secondary" onClick={() => onRun()} disabled={loading || running || generating || researching}>
               Skip profiles &amp; run
             </Button>
             <Button
               variant="primary"
               onClick={handleConfirm}
-              disabled={generating || running}
+              disabled={generating || researching || running}
               loading={loading}
               className="px-8"
             >
