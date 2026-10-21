@@ -36,9 +36,7 @@ interface KnowledgeSetupProps {
 }
 
 const LEVELS: Level[] = ['layperson', 'basic', 'advanced', 'expert']
-const FACT_LEVELS: Level[] = ['basic', 'advanced', 'expert']
-
-const isAdvancedOrExpert = (l: Level) => l === 'advanced' || l === 'expert'
+const FACT_LEVELS: Level[] = ['layperson', 'basic', 'advanced', 'expert']
 
 export default function KnowledgeSetup({
   personas,
@@ -96,6 +94,7 @@ export default function KnowledgeSetup({
         setTopics(remapped)
         setExpanded({})
         setResearchNote('')
+        await handleResearchTopics(remapped)
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to generate topics')
@@ -109,7 +108,11 @@ export default function KnowledgeSetup({
     // The ref guards against React Strict Mode running this effect twice in dev.
     if (started.current) return
     started.current = true
-    if (!cacheHit) handleGenerateTopics()
+    if (!cacheHit) {
+      handleGenerateTopics()
+    } else if (topics.length > 0 && topics.some((topic) => !topic.brief?.grounded)) {
+      handleResearchTopics(topics)
+    }
   }, [])
 
   useEffect(() => {
@@ -156,30 +159,33 @@ export default function KnowledgeSetup({
     )
   }
 
-  // Topics where at least one persona is advanced/expert are worth researching.
-  const researchable = topics.filter((t) => Object.values(t.levels).some(isAdvancedOrExpert))
+  // Research each shared topic once; facts are filtered by persona level at chat time.
+  const researchable = topics
 
-  const handleResearchBriefs = async () => {
+  const handleResearchTopics = async (topicsToResearch: KLTopic[]) => {
     setResearching(true)
     setError('')
     setResearchNote('')
     try {
-      const res = await generateKLBriefs(researchable)
+      const res = await generateKLBriefs(topicsToResearch)
       const ids = Object.keys(res.briefs)
       persist.current = true
       setTopics((prev) => prev.map((t) => (res.briefs[t.id] ? { ...t, brief: res.briefs[t.id] } : t)))
       const web = ids.filter((id) => res.briefs[id].grounded).length
       const failed = Object.keys(res.errors).length
       const parts = [`Researched ${ids.length} topic${ids.length === 1 ? '' : 's'}`]
-      if (ids.length > 0) parts.push(`${web} backed by web sources, ${ids.length - web} from model knowledge only`)
+      if (ids.length > 0) parts.push(`${web} backed by web sources`)
       if (failed > 0) parts.push(`${failed} failed`)
-      setResearchNote(parts.join(' — ') + '. Review the briefs below before confirming.')
+      if (res.skipped.length > 0) parts.push(`${res.skipped.length} skipped`)
+      setResearchNote(parts.join(' — ') + '. Review the facts below before confirming.')
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to research briefs')
+      setResearchNote(`Web research could not be completed: ${e instanceof Error ? e.message : 'Unknown error'}`)
     } finally {
       setResearching(false)
     }
   }
+
+  const handleResearchBriefs = () => handleResearchTopics(researchable)
 
   const updateBriefFact = (
     topicId: string,
@@ -238,6 +244,7 @@ export default function KnowledgeSetup({
     }
 
     setTopics((prev) => [...prev, newTopic])
+    handleResearchTopics([newTopic])
     setNewTopicName('')
     setNewTopicDomain('')
     setNewTopicConcepts('')
@@ -275,8 +282,8 @@ export default function KnowledgeSetup({
             Review and fine-tune what each persona is allowed to know. Default is layperson outside their field.
           </p>
           <p className="text-xs text-text-dim mt-0.5">
-            Optional: research expert briefs for advanced and expert topics. The search uses only topic
-            names and key concepts; your scenario text is not sent.
+            Objective topics are researched once during setup. Sourced facts are tagged by knowledge level
+            and filtered for each persona during chat. Search uses topic names and concepts, not the scenario.
           </p>
         </div>
 
@@ -285,11 +292,7 @@ export default function KnowledgeSetup({
             onClick={handleResearchBriefs}
             disabled={researchable.length === 0 || generating || researching || loading || running}
             className="text-xs font-mono bg-cyan/15 border border-cyan/40 text-cyan hover:bg-cyan/30 px-3.5 py-1.5 rounded flex items-center gap-1.5 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-            title={
-              researchable.length === 0
-                ? 'No topic has an advanced or expert persona to research'
-                : `Search the web for background that advanced and expert personas can draw on (${researchable.length} topic${researchable.length === 1 ? '' : 's'})`
-            }
+            title={`Search the web for shared, level-tagged facts across ${researchable.length} topic${researchable.length === 1 ? '' : 's'}`}
           >
             {researching ? (
               <>
@@ -297,7 +300,7 @@ export default function KnowledgeSetup({
               </>
             ) : (
               <>
-                <Search size={13} className="text-cyan" /> Research Expert Briefs
+                <Search size={13} className="text-cyan" /> Research Topics Again
               </>
             )}
           </button>
@@ -429,8 +432,8 @@ export default function KnowledgeSetup({
                       aria-expanded={!!expanded[t.id]}
                     >
                       {expanded[t.id] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                      Expert brief: {t.brief.facts.length} fact{t.brief.facts.length === 1 ? '' : 's'}
-                      {t.brief.grounded ? ' (web-sourced)' : ' (model knowledge only)'}
+                      Researched knowledge: {t.brief.facts.length} fact{t.brief.facts.length === 1 ? '' : 's'}
+                      {t.brief.grounded ? ' (web-sourced)' : ' (unverified)'}
                     </button>
                   )}
                 </td>

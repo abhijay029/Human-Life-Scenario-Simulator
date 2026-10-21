@@ -97,7 +97,7 @@ def save_knowledge_config(req: SaveConfigRequest):
                 per_persona[persona_id][topic.domain] = level
 
             # Merge reviewed brief facts by domain (keep the higher level for duplicates)
-            if topic.brief:
+            if topic.brief and topic.brief.grounded:
                 bucket = expert_briefs.setdefault(topic.domain, {})
                 for fact in topic.brief.facts:
                     text = fact.text.strip()

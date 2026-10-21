@@ -1,13 +1,13 @@
 """
 Expert-brief generation for the Knowledge Limiter.
 
-For each topic where at least one persona is advanced/expert, run
-  1. a web-search-grounded call that gathers practitioner-level research notes, then
-  2. a structured extraction call that turns the notes into level-tagged facts.
+For each selected objective subject area, a web-search-grounded call gathers
+level-tagged facts directly. A structured extraction call is used only if the
+grounded response cannot be parsed as the required JSON.
 
 The research prompt contains ONLY the topic name, domain and key concepts — never the
 scenario text or persona details — so personal scenarios are not sent to search.
-Briefs are returned to the user for review; at chat time they are gated by persona level
+Facts across all knowledge levels are returned to the user for review; at chat time they are gated by persona level
 (see ``schemas.helpers.select_brief_facts``).
 """
 from __future__ import annotations
@@ -25,14 +25,13 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..llm_client import LLMClient
-from ..schemas.constants import LEVEL_ORDER
 from ..schemas.models import BriefFact, BriefSource, Level, Topic, TopicBrief
 
 logger = logging.getLogger(__name__)
 
 _PROMPTS_DIR = pathlib.Path(__file__).parent.parent / "prompts"
 
-MAX_RESEARCHED_TOPICS = 8
+MAX_RESEARCHED_TOPICS = 12
 MAX_FACTS_PER_TOPIC = 8
 MIN_FACT_CHARS = 15
 MAX_FACT_CHARS = 300
@@ -51,15 +50,11 @@ class _RawBriefOutput(BaseModel):
 class BriefGenerationResult(BaseModel):
     briefs: dict[str, TopicBrief] = {}   # topic_id -> brief
     errors: dict[str, str] = {}          # topic_id -> reason it could not be researched
-    skipped: list[str] = []              # topic ids not researched (no advanced/expert persona, or over the cap)
-
-
-def _max_level_rank(topic: Topic) -> int:
-    return max((LEVEL_ORDER[lvl] for lvl in topic.levels.values()), default=0)
+    skipped: list[str] = []              # topic ids beyond the research cap
 
 
 def _clean_facts(raw: list[_RawFact]) -> list[BriefFact]:
-    """Normalise extracted facts: single line, sane length, no layperson tier, de-duplicated."""
+    """Normalize extracted facts and preserve their minimum knowledge tier."""
     facts: list[BriefFact] = []
     seen: set[str] = set()
     for item in raw:
@@ -70,8 +65,7 @@ def _clean_facts(raw: list[_RawFact]) -> list[BriefFact]:
         if key in seen:
             continue
         seen.add(key)
-        level = Level.basic if item.min_level == Level.layperson else item.min_level
-        facts.append(BriefFact(text=text, min_level=level))
+        facts.append(BriefFact(text=text, min_level=item.min_level))
         if len(facts) >= MAX_FACTS_PER_TOPIC:
             break
     return facts
@@ -92,7 +86,7 @@ class BriefGenerator:
     @staticmethod
     def _cache_key(topic: Topic) -> str:
         concepts = ",".join(sorted(c.term.strip().lower() for c in topic.concepts))
-        raw = f"{topic.name.strip().lower()}|{topic.domain.strip().lower()}|{concepts}"
+        raw = f"knowledge-brief-v2|{topic.name.strip().lower()}|{topic.domain.strip().lower()}|{concepts}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     @staticmethod
@@ -132,15 +126,26 @@ class BriefGenerator:
         grounded = self._llm.complete_grounded(
             [{"role": "user", "content": research_prompt}], model=settings.MAIN_MODEL
         )
+        if not grounded.grounded or not grounded.sources:
+            raise ValueError("Web search returned no verifiable sources; no facts were added")
 
-        extract_prompt = self._jinja_env.get_template("brief_extract.jinja2").render(
-            name=topic.name, domain=topic.domain, notes=grounded.text
-        )
-        extracted = self._llm.complete_structured(
-            [{"role": "user", "content": extract_prompt}],
-            output_schema=_RawBriefOutput,
-            model=settings.FAST_MODEL,
-        )
+        # Most grounded responses follow the requested JSON schema, avoiding
+        # a second model call for extraction. Keep the old extraction path as a
+        # recovery step for responses wrapped in unexpected prose or markup.
+        raw_text = grounded.text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        try:
+            extracted = _RawBriefOutput.model_validate_json(raw_text)
+        except Exception:
+            extract_prompt = self._jinja_env.get_template("brief_extract.jinja2").render(
+                name=topic.name, domain=topic.domain, notes=grounded.text
+            )
+            extracted = self._llm.complete_structured(
+                [{"role": "user", "content": extract_prompt}],
+                output_schema=_RawBriefOutput,
+                model=settings.FAST_MODEL,
+            )
         facts = _clean_facts(extracted.facts)
         if not facts:
             raise ValueError("No usable facts were extracted")
@@ -154,10 +159,8 @@ class BriefGenerator:
     # -------------------------------------------------------------- public API
 
     def generate(self, topics: list[Topic]) -> BriefGenerationResult:
-        """Research briefs for the topics that have an advanced/expert persona."""
-        eligible = [t for t in topics if _max_level_rank(t) >= LEVEL_ORDER[Level.advanced]]
-        eligible.sort(key=_max_level_rank, reverse=True)  # experts first if we must cap
-        chosen = eligible[:MAX_RESEARCHED_TOPICS]
+        """Research shared knowledge briefs for all selected topics, regardless of persona level."""
+        chosen = topics[:MAX_RESEARCHED_TOPICS]
         chosen_ids = {t.id for t in chosen}
         result = BriefGenerationResult(skipped=[t.id for t in topics if t.id not in chosen_ids])
 

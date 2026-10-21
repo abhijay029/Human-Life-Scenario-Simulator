@@ -61,16 +61,11 @@ class Concept(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Expert briefs — field knowledge a persona may draw on, gated by Level
+# Shared researched facts, gated by persona Level
 # ---------------------------------------------------------------------------
 
 class BriefFact(BaseModel):
-    """One self-contained fact an expert in the field would know.
-
-    ``min_level`` is the lowest persona level allowed to use it:
-    basic = widely known, advanced = established practice,
-    expert = recent developments / niche practitioner knowledge.
-    """
+    """One sourced field fact tagged with the minimum level needed to use it."""
 
     text: str
     min_level: Level = Level.advanced
