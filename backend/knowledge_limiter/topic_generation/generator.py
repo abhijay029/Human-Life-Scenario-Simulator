@@ -115,7 +115,9 @@ class TopicGenerator:
           keys for inputs without decision points are unchanged).
         """
         sorted_professions = sorted(p.profession for p in inp.personas)
-        raw = f"{inp.scenario_description}|{inp.tone.value}|{','.join(sorted_professions)}"
+        # Bump this namespace when topic semantics change so older cached
+        # scenario themes cannot bypass the objective-subjects prompt.
+        raw = f"objective-subjects-v2|{inp.scenario_description}|{inp.tone.value}|{','.join(sorted_professions)}"
         decisions = sorted(d.strip() for d in inp.decision_points if d.strip())
         if decisions:
             raw += "|" + "||".join(decisions)

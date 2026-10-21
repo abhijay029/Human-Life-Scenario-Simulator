@@ -13,7 +13,16 @@ Participants:
 - {{ p.name }} ({{ p.profession }}): {{ p.background_summary }}
 {% endfor %}
 
-Generate 8 to 12 topics that are LIKELY to come up in this conversation{% if decision_points %}, including the subjects the decision point(s) above would raise{% endif %}.
+Generate 8 to 12 OBJECTIVE SUBJECT AREAS that provide factual knowledge relevant to the scenario and decision point. Treat the scenario, decision point, and participant backgrounds only as clues for identifying relevant fields of knowledge. Do not turn story events, personal details, emotions, values, or relationships into topics.
+
+Topic names must be concise names of subjects that can be researched or explained using objective information. Do not include participant names or possessives, and do not phrase topics as events, questions, choices, or claims about a person.
+
+Good topic names: "Music Production Contracts and Royalties", "Engineering Employment Markets", "Student Loan Repayment", "Music Copyright and Licensing", "Career Risk Planning".
+Bad topic names: "Arjun's Music Production Deal", "Rahul's Family Values and Expectations", "Arjun's Fear of Rejection", "Arjun Pursuing Music Full Time".
+
+Key concepts must also be objective terms within the subject area (for example, "producer agreements", "royalty splits", "loan interest", "graduate hiring rates"). Do not use personal or situational details as concepts (for example, "Arjun", "fear of failure", "family support", or "Nagpur") unless a place is itself objectively relevant to a factual subject such as a local labor-market analysis.
+
+{% if decision_points %}Use the decision point(s) to select which objective subjects matter; do not repeat or paraphrase them as topic names.{% endif %}
 For each topic:
 1. Assign it to a domain (e.g. "medicine", "artificial_intelligence", "ethics", "economics", "technology", "daily_life").
 2. List 3-6 key concepts, each tagged with the MINIMUM knowledge level needed to use or understand it:
@@ -24,10 +33,7 @@ For each topic:
 3. For each participant, suggest a realistic knowledge level for this topic based on their profession.
    Use the rule: default to layperson for topics outside their field, match expertise for their own field.
 
-Tone guidance:
-- casual: surface everyday-adjacent topics, conversational concepts
-- debate: surface contested subtopics and opposing viewpoints on each topic
-- discussion: balance of technical depth and accessible entry points
+Tone affects the accessibility of the concepts, not the subject matter. Keep all topic names objective and factual for every tone.
 
 Return a JSON object with this exact structure:
 {
