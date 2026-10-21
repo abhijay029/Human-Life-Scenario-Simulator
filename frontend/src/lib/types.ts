@@ -59,9 +59,8 @@ export interface BranchSummary {
 }
 
 export interface ComparisonReport {
-  best_case: BranchSummary & { outcome_summary?: string }
-  worst_case: BranchSummary & { outcome_summary?: string }
-  most_likely: BranchSummary & { outcome_summary?: string }
+  better_case: BranchSummary & { outcome_summary?: string }
+  worse_case: BranchSummary & { outcome_summary?: string }
   all_branches_ranked: BranchSummary[]
 }
 

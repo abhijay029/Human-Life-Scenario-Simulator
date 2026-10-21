@@ -31,10 +31,8 @@ function BranchNode({ data }: {
   data: {
     label: string
     letter: string
-    outcome?: string
     prob?: number
-    isHighlight?: boolean
-    highlightType?: string
+    highlightType?: 'better' | 'worse'
   }
 }) {
   const probColor = (p?: number) => {
@@ -44,12 +42,12 @@ function BranchNode({ data }: {
     return 'text-red-alert'
   }
 
-  const borderClass = data.isHighlight
-    ? data.highlightType === 'best'
+  const borderClass = data.highlightType
+    ? data.highlightType === 'better'
       ? 'border-green-good/50 shadow-[0_0_16px_rgba(0,229,160,0.2)]'
-      : data.highlightType === 'worst'
+      : data.highlightType === 'worse'
       ? 'border-red-alert/50 shadow-[0_0_16px_rgba(255,59,92,0.2)]'
-      : 'border-amber-sim/50 shadow-[0_0_16px_rgba(255,170,0,0.2)]'
+      : 'border-border'
     : 'border-border'
 
   return (
@@ -60,14 +58,13 @@ function BranchNode({ data }: {
         <div className="w-5 h-5 rounded bg-cyan/10 border border-cyan/20 flex items-center justify-center text-[10px] font-mono text-cyan font-bold">
           {data.letter}
         </div>
-        {data.isHighlight && (
+        {data.highlightType && (
           <span className={clsx(
             'text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border',
-            data.highlightType === 'best' && 'text-green-good border-green-good/30 bg-green-good/10',
-            data.highlightType === 'worst' && 'text-red-alert border-red-alert/30 bg-red-alert/10',
-            data.highlightType === 'likely' && 'text-amber-sim border-amber-sim/30 bg-amber-sim/10',
+            data.highlightType === 'better' && 'text-green-good border-green-good/30 bg-green-good/10',
+            data.highlightType === 'worse' && 'text-red-alert border-red-alert/30 bg-red-alert/10',
           )}>
-            {data.highlightType === 'best' ? 'Best' : data.highlightType === 'worst' ? 'Worst' : 'Likely'}
+            {data.highlightType === 'better' ? 'Better Case' : 'Worse Case'}
           </span>
         )}
       </div>
@@ -85,19 +82,17 @@ function BranchNode({ data }: {
 }
 
 function OutcomeNode({ data }: {
-  data: { outcome: string; summary: string; type: 'best' | 'worst' | 'likely' }
+  data: { summary: string; type: 'better' | 'worse' }
 }) {
   const styles = {
-    best: 'border-green-good/40 bg-green-good/5',
-    worst: 'border-red-alert/40 bg-red-alert/5',
-    likely: 'border-amber-sim/40 bg-amber-sim/5',
+    better: 'border-green-good/40 bg-green-good/5',
+    worse: 'border-red-alert/40 bg-red-alert/5',
   }
   const textStyles = {
-    best: 'text-green-good',
-    worst: 'text-red-alert',
-    likely: 'text-amber-sim',
+    better: 'text-green-good',
+    worse: 'text-red-alert',
   }
-  const labels = { best: 'Best Case', worst: 'Worst Case', likely: 'Most Likely' }
+  const labels = { better: 'Better Case', worse: 'Worse Case' }
 
   return (
     <div className={clsx('px-4 py-3 border rounded max-w-[220px]', styles[data.type])}>
@@ -138,10 +133,10 @@ function buildGraph(
     data: { label: scenario.slice(0, 120) + (scenario.length > 120 ? '…' : '') },
   })
 
-  // Helper: is this branch the best/worst/likely?
-  const bestDp = report?.best_case?.decision_point
-  const worstDp = report?.worst_case?.decision_point
-  const likelyDp = report?.most_likely?.decision_point
+  // Highlight only the report's better and worse branches. Every simulated
+  // branch is still rendered, including branches that are neither one.
+  const betterDp = report?.better_case?.decision_point
+  const worseDp = report?.worse_case?.decision_point
 
   branches.forEach((branch, i) => {
     const x = startX - totalWidth / 2 + i * BRANCH_SPACING
@@ -154,9 +149,8 @@ function buildGraph(
       ? goalSuccess.reduce((s, p) => s + p.success_probability, 0) / goalSuccess.length
       : undefined
 
-    const isBest = branch.decision_point === bestDp
-    const isWorst = branch.decision_point === worstDp
-    const isLikely = branch.decision_point === likelyDp
+    const isBetter = branch.decision_point === betterDp
+    const isWorse = branch.decision_point === worseDp
 
     nodes.push({
       id: branchId,
@@ -166,8 +160,7 @@ function buildGraph(
         label: branch.decision_point.slice(0, 100) + (branch.decision_point.length > 100 ? '…' : ''),
         letter: String.fromCharCode(65 + i),
         prob: avgProb,
-        isHighlight: isBest || isWorst || isLikely,
-        highlightType: isBest ? 'best' : isWorst ? 'worst' : isLikely ? 'likely' : undefined,
+        highlightType: isBetter ? 'better' : isWorse ? 'worse' : undefined,
       },
     })
 
@@ -180,19 +173,18 @@ function buildGraph(
       animated: true,
     })
 
-    // Outcome node for each branch
-    const outcome = branch.analysis?.outcome_category
-    if (outcome) {
-      const type = outcome === 'Best Case' ? 'best' : outcome === 'Worst Case' ? 'worst' : 'likely'
+    // Add outcome nodes only for the better and worse report entries. In
+    // particular, do not create or label a "Most Likely" node.
+    const outcomeType = isBetter ? 'better' : isWorse ? 'worse' : undefined
+    if (outcomeType) {
       const outcomeId = `outcome-${i}`
       nodes.push({
         id: outcomeId,
         type: 'outcome',
         position: { x, y: 380 },
         data: {
-          outcome,
           summary: (branch.analysis?.outcome_summary || '').slice(0, 120),
-          type,
+          type: outcomeType,
         },
       })
       edges.push({
