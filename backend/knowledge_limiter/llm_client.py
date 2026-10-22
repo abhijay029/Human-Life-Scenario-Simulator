@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from pydantic import BaseModel
+from langchain_core.output_parsers import JsonOutputParser
 
 from backend.core.llm import get_evaluator
 
@@ -42,10 +43,27 @@ def _complete_structured_via_ollama(
     output_schema: type[BaseModel],
     temperature: float = 0.0,
 ) -> BaseModel:
-    """Complete a structured prompt using the shared Ollama evaluator instance."""
+    """Complete a structured prompt using JsonOutputParser and Pydantic validation."""
     logger.info("Executing structured completion via shared Ollama evaluator")
-    structured_llm = _ollama_llm.with_structured_output(output_schema)
-    return structured_llm.invoke(_messages_to_lc(messages))
+    parser = JsonOutputParser(pydantic_object=output_schema)
+
+    # Give the model LangChain's schema-specific JSON instructions in addition
+    # to the domain prompt. Do not mutate the caller's message list because it
+    # may be reused for retries.
+    parser_instructions = (
+        "\n\nReturn only valid JSON matching these instructions:\n"
+        f"{parser.get_format_instructions()}\n"
+        "Do not use Markdown code fences. Do not prefix positive numbers with '+'."
+    )
+    parser_messages = [dict(message) for message in messages]
+    for message in reversed(parser_messages):
+        if message.get("role", "user") != "system":
+            message["content"] = message.get("content", "") + parser_instructions
+            break
+
+    response = _ollama_llm.invoke(_messages_to_lc(parser_messages))
+    parsed = parser.parse(str(response.content))
+    return output_schema.model_validate(parsed)
 
 
 class GroundedResult(BaseModel):
