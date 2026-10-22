@@ -4,7 +4,6 @@ SQLite persistence layer for the Observer Agent.
 Schema:
   sessions         — session metadata (id, scenario, participants, created_at, finalized_at)
   turn_observations — per-turn JSON blobs
-  dyad_snapshots   — per-turn per-dyad dimension values (queryable for trajectory charts)
   scorecards       — final ConversationScorecard JSON
 """
 from __future__ import annotations
@@ -16,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from .schemas import TurnObservation, ConversationScorecard, TrajectorySummary
+from .schemas import TurnObservation, ConversationScorecard
 
 logger = logging.getLogger(__name__)
 
@@ -55,23 +54,6 @@ def init_db(db_path: Path = _DB_PATH) -> None:
 
             CREATE INDEX IF NOT EXISTS idx_obs_session
                 ON turn_observations(session_id, turn_index);
-
-            CREATE TABLE IF NOT EXISTS dyad_snapshots (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id      TEXT NOT NULL,
-                turn_index      INTEGER NOT NULL,
-                pair_key        TEXT NOT NULL,
-                trust           REAL,
-                rapport         REAL,
-                tension         REAL,
-                respect         REAL,
-                power_balance   REAL,
-                created_at      REAL NOT NULL,
-                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_dyad_session
-                ON dyad_snapshots(session_id, pair_key);
 
             CREATE TABLE IF NOT EXISTS scorecards (
                 session_id      TEXT PRIMARY KEY,
@@ -164,27 +146,6 @@ class ObserverStorage:
                     time.time(),
                 ),
             )
-            # Persist dyad snapshots from this observation
-            for dyad in obs.dyad_states:
-                conn.execute(
-                    """
-                    INSERT INTO dyad_snapshots
-                        (session_id, turn_index, pair_key,
-                         trust, rapport, tension, respect, power_balance, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        obs.session_id,
-                        obs.turn_index,
-                        dyad.pair_key(),
-                        dyad.trust,
-                        dyad.rapport,
-                        dyad.tension,
-                        dyad.respect,
-                        dyad.power_balance,
-                        time.time(),
-                    ),
-                )
             conn.commit()
         except Exception as exc:
             logger.error("save_observation failed: %s", exc)
@@ -203,23 +164,6 @@ class ObserverStorage:
             conn.close()
 
     # ── Dyad snapshots ────────────────────────────────────────────────────────
-
-    def get_dyad_history(self, session_id: str, pair_key: str) -> list[dict]:
-        """Return list of {turn_index, trust, rapport, tension, respect, power_balance}."""
-        conn = self._conn()
-        try:
-            rows = conn.execute(
-                """
-                SELECT turn_index, trust, rapport, tension, respect, power_balance
-                FROM dyad_snapshots
-                WHERE session_id = ? AND pair_key = ?
-                ORDER BY turn_index
-                """,
-                (session_id, pair_key),
-            ).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
 
     # ── Scorecards ───────────────────────────────────────────────────────────
 

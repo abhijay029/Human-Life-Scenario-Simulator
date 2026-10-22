@@ -9,8 +9,8 @@ Architecture:
   - The worker consumes events one-at-a-time, calling ObserverService.observe_turn().
   - On `finalize_session()`, a sentinel (None) is enqueued; the worker drains,
     calls ObserverService.finalize(), then broadcasts the scorecard via SSE and persists to SQLite.
-  - SSE subscribers per session receive: "turn", "observation", "trajectory", "final" events.
-  - SSE stream includes catch-up: replays already-processed observations, trajectories, and scorecard.
+  - SSE subscribers per session receive the finalized scorecard event.
+  - SSE stream includes catch-up for an already-finalized scorecard.
 
 Privacy rule: only public dialogue (speaker name + message) reaches the observer.
 """
@@ -204,16 +204,6 @@ class ObserverPipeline:
         """
         pipe = self.get_or_create_session(session_id)
 
-        # Catch-up: replay already-processed observations
-        for obs in pipe.observations:
-            yield _sse_event("observation", obs.model_dump())
-
-        # Also yield latest trajectory if available
-        trajectories = self._observer.get_all_trajectories(session_id)
-        if trajectories:
-            traj_data = [t.model_dump() for t in trajectories]
-            yield _sse_event("trajectory", {"trajectories": traj_data})
-
         # If already finalized, yield scorecard and close
         if pipe.finalized and pipe.scorecard:
             yield _sse_event("final", pipe.scorecard.model_dump())
@@ -246,9 +236,6 @@ class ObserverPipeline:
                     break
 
                 event: TurnEvent = item
-                # Broadcast raw turn event so SSE clients see the dialogue immediately
-                _broadcast(pipe, _sse_event("turn", event.model_dump()))
-
                 # Observe (runs in thread pool to avoid blocking the asyncio event loop)
                 try:
                     loop = asyncio.get_running_loop()
@@ -262,13 +249,6 @@ class ObserverPipeline:
                             self._storage.save_observation(obs)
                         except Exception as _st_exc:
                             logger.warning("Failed to persist observation: %s", _st_exc)
-
-                    _broadcast(pipe, _sse_event("observation", obs.model_dump()))
-
-                    # Trajectory snapshot after each turn
-                    trajectories = self._observer.get_all_trajectories(pipe.session_id)
-                    traj_data = [t.model_dump() for t in trajectories]
-                    _broadcast(pipe, _sse_event("trajectory", {"trajectories": traj_data}))
 
                 except Exception as exc:
                     logger.error("Worker observe_turn failed: %s", exc)
@@ -319,9 +299,6 @@ class ObserverPipeline:
         if self._storage:
             return self._storage.get_observations(session_id)
         return []
-
-    def get_trajectories(self, session_id: str):
-        return self._observer.get_all_trajectories(session_id)
 
     def get_scorecard(self, session_id: str) -> Optional[ConversationScorecard]:
         pipe = self._sessions.get(session_id)

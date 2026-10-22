@@ -264,7 +264,6 @@ export default function Home() {
           <SimulatingScreen
             mode={mode}
             decisionPoint={mode === 'single' ? decisionPoint : scenario}
-            sessionId={sessionId || null}
             liveDialogue={liveDialogue}
             liveBranches={liveBranches}
           />

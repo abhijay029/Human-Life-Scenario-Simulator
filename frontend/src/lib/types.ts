@@ -91,54 +91,7 @@ export type AppStep = 'build' | 'simulate' | 'results'
 
 export type SimMode = 'single' | 'multiverse'
 
-// ── Observer Agent (real-time) ──────────────────────────────────────────────
-
-export interface DyadState {
-  from_party: string
-  to_party: string
-  trust: number
-  rapport: number
-  tension: number
-  respect: number
-  power_balance: number
-}
-
-export interface TurningPoint {
-  turn_index: number
-  dimension: string
-  delta: number
-  value_after: number
-  reason: string
-}
-
-export interface TurnObservation {
-  session_id: string
-  turn_index: number
-  speaker: string
-  sentiment: 'positive' | 'neutral' | 'negative'
-  sentiment_score: number
-  emotion_labels: string[]
-  dyad_deltas: Record<string, Record<string, number>>
-  dyad_states: DyadState[]
-  key_event: string | null
-  confidence: number
-  degraded: boolean
-  timestamp: number
-}
-
-export interface TrajectorySummary {
-  dyad_pair: string
-  dimension: string
-  start: number
-  current: number
-  min_value: number
-  max_value: number
-  slope: number
-  label: 'improving' | 'stable' | 'deteriorating'
-  turning_points: TurningPoint[]
-  /** Full per-turn value history (index 0 = initial state) */
-  history: number[]
-}
+// ── Observer Agent ─────────────────────────────────────────────────────────
 
 export interface ConversationScorecard {
   session_id: string
@@ -157,9 +110,5 @@ export interface ConversationScorecard {
 }
 
 export interface ObserverSSEState {
-  observations: TurnObservation[]
-  trajectories: TrajectorySummary[]
   scorecard: ConversationScorecard | null
-  connected: boolean
-  finalized: boolean
 }

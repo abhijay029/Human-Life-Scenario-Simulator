@@ -7,10 +7,9 @@ from .schemas import (
     DyadState,
     TurningPoint,
     TurnObservation,
-    TrajectorySummary,
     ConversationScorecard,
 )
-from .math_utils import apply_dyad_deltas, calculate_slope, classify_trajectory
+from .math_utils import apply_dyad_deltas
 
 __all__ = [
     "ObserverService",
@@ -21,9 +20,6 @@ __all__ = [
     "DyadState",
     "TurningPoint",
     "TurnObservation",
-    "TrajectorySummary",
     "ConversationScorecard",
     "apply_dyad_deltas",
-    "calculate_slope",
-    "classify_trajectory",
 ]

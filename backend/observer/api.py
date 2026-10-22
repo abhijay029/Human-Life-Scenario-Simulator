@@ -4,9 +4,8 @@ Observer Agent FastAPI Router — REST + SSE endpoints.
 Routes:
   POST   /observer/sessions                    — create/register a session
   GET    /observer/sessions                    — list all sessions
-  GET    /observer/sessions/{id}/stream        — SSE stream (turn | observation | trajectory | final)
+  GET    /observer/sessions/{id}/stream        — SSE stream (final scorecard)
   GET    /observer/sessions/{id}/observations  — past observations
-  GET    /observer/sessions/{id}/trajectory    — trajectory summaries for all dyads
   GET    /observer/sessions/{id}/scorecard     — final scorecard (once finalized)
   POST   /observer/sessions/{id}/turn          — manually submit a turn event (for testing)
   POST   /observer/sessions/{id}/finalize      — trigger finalization
@@ -23,7 +22,7 @@ from pydantic import BaseModel
 
 from .pipeline import get_pipeline
 from .storage import ObserverStorage
-from .schemas import TurnEvent, TrajectorySummary, ConversationScorecard, TurnObservation
+from .schemas import TurnEvent, ConversationScorecard, TurnObservation
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +57,6 @@ class SubmitTurnRequest(BaseModel):
     message: str
     turn_index: Optional[int] = None
     runtime: str = "simulation"
-
-
-class TrajectoryResponse(BaseModel):
-    session_id: str
-    trajectories: list[TrajectorySummary]
 
 
 class ObservationsResponse(BaseModel):
@@ -118,7 +112,7 @@ async def list_sessions():
 async def stream_session(session_id: str):
     """
     SSE stream for a session.
-    Events: turn | observation | trajectory | final | heartbeat
+    Events: final | heartbeat
     """
     pipeline = get_pipeline()
 
@@ -145,14 +139,6 @@ async def get_observations(session_id: str):
     if not observations:
         observations = _storage.get_observations(session_id)
     return ObservationsResponse(session_id=session_id, observations=observations)
-
-
-@router.get("/sessions/{session_id}/trajectory", response_model=TrajectoryResponse)
-async def get_trajectory(session_id: str):
-    """Return trajectory summaries for all directed dyads in this session."""
-    pipeline = get_pipeline()
-    trajectories = pipeline.get_trajectories(session_id)
-    return TrajectoryResponse(session_id=session_id, trajectories=trajectories)
 
 
 @router.get("/sessions/{session_id}/scorecard", response_model=ConversationScorecard)

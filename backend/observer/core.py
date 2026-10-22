@@ -1,7 +1,6 @@
 """
 Observer Agent core service.
-Executes real-time turn-by-turn observation, directed dyad updates, trajectory calculations,
-and comprehensive conversation scorecards.
+Executes turn-by-turn observation and comprehensive conversation scorecards.
 """
 from __future__ import annotations
 
@@ -28,10 +27,9 @@ from .schemas import (
     DyadState,
     TurningPoint,
     TurnObservation,
-    TrajectorySummary,
     ConversationScorecard,
 )
-from .math_utils import apply_dyad_deltas, calculate_slope, classify_trajectory
+from .math_utils import apply_dyad_deltas
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +70,6 @@ class SessionState:
         self.dyads: dict[str, DyadState] = {}
         self.turns: list[TurnEvent] = []
         self.observations: list[TurnObservation] = []
-        self.history_values: dict[str, dict[str, list[float]]] = {}
         self.turning_points: list[TurningPoint] = []
         self.rolling_summary: str = ""
 
@@ -209,9 +206,6 @@ class ObserverService:
                     if key not in session.dyads:
                         state = DyadState.initial(p1, p2)
                         session.dyads[key] = state
-                        session.history_values[key] = {
-                            dim: [getattr(state, dim)] for dim in DIMENSIONS
-                        }
 
     def _ensure_dyads_for_parties(self, session: SessionState, speaker: str, listeners: list[str]) -> None:
         session.participants.add(speaker)
@@ -228,9 +222,6 @@ class ObserverService:
                 if key not in session.dyads:
                     state = DyadState.initial(p1, p2)
                     session.dyads[key] = state
-                    session.history_values[key] = {
-                        dim: [getattr(state, dim)] for dim in DIMENSIONS
-                    }
 
     def observe_turn(self, event: TurnEvent) -> TurnObservation:
         """
@@ -321,9 +312,6 @@ class ObserverService:
                 if len(parts) == 2:
                     p1, p2 = parts[0].strip(), parts[1].strip()
                     session.dyads[pair_key] = DyadState.initial(p1, p2)
-                    session.history_values[pair_key] = {
-                        dim: [getattr(session.dyads[pair_key], dim)] for dim in DIMENSIONS
-                    }
 
             if pair_key in session.dyads:
                 current_state = session.dyads[pair_key]
@@ -338,17 +326,6 @@ class ObserverService:
                 session.dyads[pair_key] = new_state
                 turn_turning_points.extend(tps)
                 session.turning_points.extend(tps)
-
-        # Synchronize timeline history for ALL session dyads
-        for pair_key, state in session.dyads.items():
-            if pair_key not in session.history_values:
-                session.history_values[pair_key] = {
-                    dim: [getattr(state, dim)] for dim in DIMENSIONS
-                }
-            else:
-                for dim in DIMENSIONS:
-                    while len(session.history_values[pair_key][dim]) < len(session.turns):
-                        session.history_values[pair_key][dim].append(getattr(state, dim))
 
         # Build turn observation
         observation = TurnObservation(
@@ -391,60 +368,6 @@ class ObserverService:
         except Exception as exc:
             logger.warning("Rolling summary update failed for session %s: %s", session.session_id, exc)
 
-    def get_trajectory_summary(
-        self, session_id: str, pair_key: str, dimension: str
-    ) -> Optional[TrajectorySummary]:
-        session = self._sessions.get(session_id)
-        if not session or pair_key not in session.history_values:
-            return None
-
-        dim_values = session.history_values[pair_key].get(dimension, [])
-        if not dim_values:
-            state = session.dyads.get(pair_key)
-            if not state:
-                return None
-            val = getattr(state, dimension)
-            dim_values = [val]
-
-        start_val = dim_values[0]
-        curr_val = dim_values[-1]
-        min_val = min(dim_values)
-        max_val = max(dim_values)
-        slope = calculate_slope(dim_values)
-        label = classify_trajectory(dimension, slope)
-
-        tps = [
-            tp
-            for tp in session.turning_points
-            if tp.dimension == dimension
-        ]
-
-        return TrajectorySummary(
-            dyad_pair=pair_key,
-            dimension=dimension,
-            start=start_val,
-            current=curr_val,
-            min_value=min_val,
-            max_value=max_val,
-            slope=slope,
-            label=label,
-            turning_points=tps,
-            history=list(dim_values),
-        )
-
-    def get_all_trajectories(self, session_id: str) -> list[TrajectorySummary]:
-        session = self._sessions.get(session_id)
-        if not session:
-            return []
-
-        summaries: list[TrajectorySummary] = []
-        for pair_key in session.dyads.keys():
-            for dim in DIMENSIONS:
-                s = self.get_trajectory_summary(session_id, pair_key, dim)
-                if s:
-                    summaries.append(s)
-        return summaries
-
     def finalize(self, session_id: str) -> ConversationScorecard:
         """
         Runs comprehensive post-conversation evaluation and generates scorecard.
@@ -456,14 +379,11 @@ class ObserverService:
                 summary="Session not found",
             )
 
-        trajectories = self.get_all_trajectories(session_id)
-
         template = self._jinja_env.get_template("observer_scorecard.jinja2")
         prompt = template.render(
             scenario_description=session.scenario_description,
             participants=sorted(list(session.participants)),
             dialogue=session.turns,
-            trajectory_summaries=trajectories,
         )
 
         messages = [

@@ -36,9 +36,6 @@ OBSERVER_HISTORY_WINDOW: int = 6
 # Interval for updating rolling narrative summary
 SUMMARY_REFRESH_INTERVAL: int = 4
 
-# Trajectory classification slope thresholds (units per turn)
-SLOPE_THRESHOLD_SIGNIFICANT: float = 0.75
-
 # Realism metric keys evaluated in ConversationScorecard (scale 1.0 - 10.0)
 REALISM_METRIC_KEYS = (
     "persona_consistency",

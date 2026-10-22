@@ -73,21 +73,6 @@ class TurnObservation(BaseModel):
     timestamp: float = Field(default_factory=time.time)
 
 
-class TrajectorySummary(BaseModel):
-    """Summary of trajectory along one dimension for one directed dyad."""
-    dyad_pair: str
-    dimension: str
-    start: float
-    current: float
-    min_value: float
-    max_value: float
-    slope: float
-    label: Literal["improving", "stable", "deteriorating"]
-    turning_points: list[TurningPoint] = Field(default_factory=list)
-    # Full per-turn value history (index 0 = initial state before turn 1)
-    history: list[float] = Field(default_factory=list)
-
-
 class ConversationScorecard(BaseModel):
     """Final post-conversation evaluation scorecard."""
     session_id: str

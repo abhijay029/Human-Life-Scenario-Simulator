@@ -98,10 +98,7 @@ function SingleResult({
         {sessionId && (
           <TabBtn active={tab === 'observer'} onClick={() => setTab('observer')}>
             <Activity size={12} />
-            Observer
-            {observer.connected && (
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
-            )}
+            Simulation score
           </TabBtn>
         )}
       </div>

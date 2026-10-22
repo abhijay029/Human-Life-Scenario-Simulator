@@ -1,17 +1,14 @@
 """
-Pure math and trajectory utility functions for the Observer Agent.
-Includes delta clamping, exponential smoothing (EMA), linear regression slope,
-and trajectory classification.
+Pure math utilities for the Observer Agent.
+Includes delta clamping and exponential smoothing (EMA).
 """
 from __future__ import annotations
 
-from typing import Literal
 from .constants import (
     BOUNDS,
     DIMENSIONS,
     MAX_DELTA,
     SMOOTHING_ALPHA,
-    SLOPE_THRESHOLD_SIGNIFICANT,
 )
 from .schemas import DyadState, TurningPoint
 
@@ -60,52 +57,3 @@ def apply_dyad_deltas(
 
     new_state = current.model_copy(update=updates)
     return new_state, turning_points
-
-
-def calculate_slope(values: list[float]) -> float:
-    """
-    Computes ordinary least squares linear regression slope over a sequence of values.
-    Returns 0.0 if fewer than 2 values are provided.
-    """
-    n = len(values)
-    if n < 2:
-        return 0.0
-
-    # x values are 0, 1, ..., n-1
-    x_mean = (n - 1) / 2.0
-    y_mean = sum(values) / n
-
-    numerator = sum((i - x_mean) * (y - y_mean) for i, y in enumerate(values))
-    denominator = sum((i - x_mean) ** 2 for i in range(n))
-
-    if denominator == 0.0:
-        return 0.0
-
-    return round(numerator / denominator, 4)
-
-
-def classify_trajectory(
-    dimension: str,
-    slope: float,
-    threshold: float = SLOPE_THRESHOLD_SIGNIFICANT,
-) -> Literal["improving", "stable", "deteriorating"]:
-    """
-    Classifies a dimension's trajectory based on linear slope and polarity.
-
-    - For tension: rising tension (> threshold) is deteriorating; falling is improving.
-    - For trust, rapport, respect, power_balance: positive slope (> threshold) is improving;
-      negative slope (< -threshold) is deteriorating.
-    - Slopes within [-threshold, threshold] are classified as stable.
-    """
-    if dimension == "tension":
-        if slope > threshold:
-            return "deteriorating"
-        elif slope < -threshold:
-            return "improving"
-        return "stable"
-    else:
-        if slope > threshold:
-            return "improving"
-        elif slope < -threshold:
-            return "deteriorating"
-        return "stable"

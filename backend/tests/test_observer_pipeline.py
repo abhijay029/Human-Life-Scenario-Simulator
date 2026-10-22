@@ -203,28 +203,6 @@ def test_storage_save_and_get_scorecard(tmp_db):
     assert loaded.outcome_category == "Best Case"
 
 
-def test_storage_get_dyad_history(tmp_db):
-    tmp_db.upsert_session("sess_dyad")
-    for i in range(3):
-        obs = TurnObservation(
-            session_id="sess_dyad",
-            turn_index=i,
-            speaker="Alice",
-            sentiment="neutral",
-            sentiment_score=0.0,
-            dyad_states=[
-                DyadState(from_party="Alice", to_party="Bob",
-                          trust=50.0 + i * 2, rapport=50.0, tension=50.0, respect=50.0, power_balance=0.0)
-            ],
-        )
-        tmp_db.save_observation(obs)
-
-    history = tmp_db.get_dyad_history("sess_dyad", "Alice->Bob")
-    assert len(history) == 3
-    assert history[0]["trust"] == 50.0
-    assert history[2]["trust"] == 54.0
-
-
 def test_storage_get_nonexistent_scorecard_returns_none(tmp_db):
     result = tmp_db.get_scorecard("nonexistent_session")
     assert result is None

@@ -10,8 +10,6 @@ from backend.observer.constants import MAX_DELTA, SMOOTHING_ALPHA
 from backend.observer.schemas import DyadState, TurnEvent, TurnObservation, ConversationScorecard
 from backend.observer.math_utils import (
     apply_dyad_deltas,
-    calculate_slope,
-    classify_trajectory,
 )
 from backend.observer.core import (
     ObserverService,
@@ -71,33 +69,6 @@ def test_apply_dyad_deltas_bounds_clamping():
     assert new_state.rapport == 0.0
     assert new_state.tension == 100.0
     assert new_state.power_balance == -100.0
-
-
-def test_calculate_slope():
-    # Empty or single value
-    assert calculate_slope([]) == 0.0
-    assert calculate_slope([50.0]) == 0.0
-
-    # Flat line
-    assert calculate_slope([50.0, 50.0, 50.0]) == 0.0
-
-    # Linear increase
-    assert calculate_slope([10.0, 20.0, 30.0]) == 10.0
-
-    # Linear decrease
-    assert calculate_slope([30.0, 20.0, 10.0]) == -10.0
-
-
-def test_classify_trajectory():
-    # Polarity for trust, rapport, respect: positive slope = improving
-    assert classify_trajectory("trust", 1.2) == "improving"
-    assert classify_trajectory("trust", -1.2) == "deteriorating"
-    assert classify_trajectory("trust", 0.2) == "stable"
-
-    # Polarity for tension: inverted (positive slope = deteriorating)
-    assert classify_trajectory("tension", 1.2) == "deteriorating"
-    assert classify_trajectory("tension", -1.2) == "improving"
-    assert classify_trajectory("tension", 0.5) == "stable"
 
 
 def test_observer_service_observe_turn_mocked():
