@@ -53,20 +53,20 @@ function PersonaCard({
 
   return (
     <Panel
-      className="overflow-hidden"
+      className="overflow-visible"
       label={`Persona ${index + 1}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-cyan/10 border border-cyan/20 flex items-center justify-center">
-            <User size={14} className="text-cyan" />
+      <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="w-9 h-9 shrink-0 rounded-full bg-cyan/10 border border-cyan/20 flex items-center justify-center">
+            <User size={16} className="text-cyan" />
           </div>
-          <div>
-            <p className="font-display font-semibold text-text-primary text-sm">
+          <div className="min-w-0">
+            <p className="font-display font-semibold text-text-primary text-base leading-tight break-words">
               {persona.name || `Unnamed Persona ${index + 1}`}
             </p>
-            <p className="text-[11px] text-text-secondary font-mono">
+            <p className="text-xs text-text-secondary font-mono break-words">
               {persona.occupation || 'No occupation set'}
             </p>
           </div>
@@ -90,8 +90,8 @@ function PersonaCard({
         <div className="p-4 space-y-5">
           {/* AI Quick Build */}
           <div className="bg-cyan/5 border border-cyan/15 rounded p-3 space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-mono text-cyan tracking-[0.15em] uppercase">
-              <Sparkles size={11} />
+            <div className="flex items-center gap-2 text-xs font-mono text-cyan tracking-[0.15em] uppercase">
+              <Sparkles size={13} />
               AI Quick Build
             </div>
             <div className="flex gap-2">
@@ -99,7 +99,7 @@ function PersonaCard({
                 value={aiDesc}
                 onChange={(e) => setAiDesc(e.target.value)}
                 placeholder="Describe this person in plain language…"
-                className="flex-1 bg-void border border-border rounded px-3 py-1.5 text-sm text-text-primary placeholder:text-text-dim focus:outline-none focus:border-cyan/40 transition-all font-body"
+                className="flex-1 bg-void border border-border rounded px-3 py-2 text-base text-text-primary placeholder:text-text-dim focus:outline-none focus:border-cyan/40 transition-all font-body"
                 onKeyDown={(e) => e.key === 'Enter' && handleAiBuild()}
               />
               <Button
@@ -111,13 +111,13 @@ function PersonaCard({
                 Build
               </Button>
             </div>
-            {aiError && <p className="text-xs text-red-alert font-mono">{aiError}</p>}
+            {aiError && <p className="text-sm text-red-alert font-mono">{aiError}</p>}
           </div>
 
           <Divider label="or fill manually" />
 
           {/* Basic fields */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Full Name" value={persona.name} onChange={(v) => set('name', v)} placeholder="Rahul Sharma" />
             <Input label="Age" type="number" value={String(persona.age)} onChange={(v) => set('age', parseInt(v) || 0)} />
           </div>
@@ -195,7 +195,7 @@ export default function CharacterBuilder({
         <h2 className="font-display text-2xl font-bold text-text-primary">
           Character Builder
         </h2>
-        <p className="text-sm text-text-secondary mt-1">
+        <p className="text-base text-text-secondary mt-1">
           Define the personas who will participate in the simulation. Minimum 2 required.
         </p>
       </div>
@@ -231,7 +231,7 @@ export default function CharacterBuilder({
       </div>
 
       {!isValid && (
-        <p className="text-xs text-text-dim font-mono text-center">
+        <p className="text-sm text-text-dim font-mono text-center">
           Each persona needs a name, occupation, and at least one goal. Minimum 2 personas required.
         </p>
       )}

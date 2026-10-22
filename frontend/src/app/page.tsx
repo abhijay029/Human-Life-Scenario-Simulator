@@ -23,13 +23,13 @@ const STEPS = [
 function StepBar({ current }: { current: string }) {
   const idx = STEPS.findIndex((s) => s.key === current)
   return (
-    <div className="flex items-center gap-0">
+    <div className="flex flex-wrap items-center justify-center gap-y-1">
       {STEPS.map((step, i) => {
         const Icon = step.icon
         const isActive = i === idx
         const isDone = i < idx
         return (
-          <div key={step.key} className="flex items-center">
+            <div key={step.key} className="flex items-center">
             <div
               className={clsx(
                 'flex items-center gap-2 px-4 py-2 text-xs font-mono tracking-wide transition-all duration-300',
@@ -234,8 +234,8 @@ export default function Home() {
   return (
     <div className="min-h-screen grid-bg">
       {/* Top bar */}
-      <header className="border-b border-border bg-panel/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="border-b border-border bg-panel/90 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 min-h-14 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded bg-cyan/10 border border-cyan/30 flex items-center justify-center">
               <Cpu size={13} className="text-cyan" />
@@ -250,7 +250,7 @@ export default function Home() {
             </div>
           </div>
 
-          {step !== 'running' && <StepBar current={displayStep} />}
+          {step !== 'running' && <div className="order-3 w-full md:order-none md:w-auto"><StepBar current={displayStep} /></div>}
 
           <div className="text-[10px] font-mono text-text-dim hidden sm:block">
             v0.4.0
@@ -259,7 +259,7 @@ export default function Home() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {step === 'running' && (
           <SimulatingScreen
             mode={mode}
@@ -337,8 +337,8 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-20 py-6">
-        <p className="text-center text-[10px] font-mono text-text-dim tracking-wider">
+      <footer className="border-t border-border mt-16 py-6 px-4">
+        <p className="text-center text-[10px] font-mono text-text-dim tracking-wider leading-relaxed">
           HUMAN LIFE SCENARIO SIMULATOR · Abhijay Tambe · Himanshu Khobragade · Arpit Deshmukh · Guide: Prof. Harshita Patil
         </p>
       </footer>

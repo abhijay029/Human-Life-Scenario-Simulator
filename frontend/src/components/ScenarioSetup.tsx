@@ -97,7 +97,7 @@ export default function ScenarioSetup({
         <label className="text-[10px] font-mono text-text-secondary tracking-[0.15em] uppercase">
           Simulation Mode
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={() => onModeChange('single')}
             className={`panel p-4 text-left transition-all duration-200 ${
@@ -203,7 +203,7 @@ export default function ScenarioSetup({
             Used to suggest topics and expertise levels on the next screen.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TONES.map((t) => (
             <button
               key={t.value}

@@ -15,7 +15,7 @@ export function Panel({
   return (
     <div className={clsx('relative panel', className)}>
       {label && (
-        <div className="absolute -top-px left-4 px-2 bg-void text-[10px] font-mono text-text-secondary tracking-[0.2em] uppercase transform -translate-y-1/2">
+        <div className="absolute -top-px left-4 px-2 bg-void text-xs font-mono text-text-secondary tracking-[0.2em] uppercase transform -translate-y-1/2 whitespace-nowrap">
           {label}
         </div>
       )}
@@ -81,7 +81,7 @@ export function Input({
   return (
     <div className={clsx('flex flex-col gap-1.5', className)}>
       {label && (
-        <label className="text-[10px] font-mono text-text-secondary tracking-[0.15em] uppercase">
+        <label className="text-xs font-mono text-text-secondary tracking-[0.15em] uppercase">
           {label}
         </label>
       )}
@@ -90,7 +90,7 @@ export function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="bg-void border border-border rounded px-3 py-2 text-sm text-text-primary font-body placeholder:text-text-dim focus:outline-none focus:border-cyan/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)] transition-all"
+        className="bg-void border border-border rounded px-3 py-2.5 text-base text-text-primary font-body placeholder:text-text-dim focus:outline-none focus:border-cyan/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)] transition-all"
       />
     </div>
   )
@@ -115,7 +115,7 @@ export function Textarea({
   return (
     <div className={clsx('flex flex-col gap-1.5', className)}>
       {label && (
-        <label className="text-[10px] font-mono text-text-secondary tracking-[0.15em] uppercase">
+        <label className="text-xs font-mono text-text-secondary tracking-[0.15em] uppercase">
           {label}
         </label>
       )}
@@ -124,7 +124,7 @@ export function Textarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="bg-void border border-border rounded px-3 py-2 text-sm text-text-primary font-body placeholder:text-text-dim focus:outline-none focus:border-cyan/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)] transition-all resize-none"
+        className="bg-void border border-border rounded px-3 py-2.5 text-base text-text-primary font-body placeholder:text-text-dim focus:outline-none focus:border-cyan/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)] transition-all resize-none"
       />
     </div>
   )
@@ -146,7 +146,7 @@ export function Badge({
     cyan: 'bg-cyan/10 text-cyan border border-cyan/20',
   }
   return (
-    <span className={clsx('inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase', variants[variant])}>
+    <span className={clsx('inline-flex items-center px-2 py-1 rounded text-xs font-mono tracking-wider uppercase', variants[variant])}>
       {children}
     </span>
   )
@@ -155,7 +155,7 @@ export function Badge({
 // ── Tag ────────────────────────────────────────────────────────────────────
 export function Tag({ label, onRemove }: { label: string; onRemove?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 bg-border rounded text-xs font-mono text-text-secondary">
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-border rounded text-sm font-mono text-text-secondary">
       {label}
       {onRemove && (
         <button
@@ -193,7 +193,7 @@ export function TagInput({
   }
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-mono text-text-secondary tracking-[0.15em] uppercase">
+      <label className="text-xs font-mono text-text-secondary tracking-[0.15em] uppercase">
         {label}
       </label>
       <div className="min-h-[42px] bg-void border border-border rounded px-3 py-2 flex flex-wrap gap-1.5 focus-within:border-cyan/50 transition-all">
@@ -203,10 +203,10 @@ export function TagInput({
         <input
           onKeyDown={handleKey}
           placeholder={tags.length === 0 ? placeholder : '+ add…'}
-          className="flex-1 min-w-[80px] bg-transparent text-sm text-text-primary placeholder:text-text-dim focus:outline-none font-body"
+          className="flex-1 min-w-[80px] bg-transparent text-base text-text-primary placeholder:text-text-dim focus:outline-none font-body"
         />
       </div>
-      <p className="text-[10px] text-text-dim">Press Enter or comma to add</p>
+      <p className="text-xs text-text-dim">Press Enter or comma to add</p>
     </div>
   )
 }

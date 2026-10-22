@@ -20,7 +20,7 @@ import { clsx } from 'clsx'
 function ScenarioNode({ data }: { data: { label: string } }) {
   return (
     <div className="px-4 py-3 bg-panel border border-cyan/40 rounded shadow-cyan-glow max-w-[240px]">
-      <Handle type="source" position={Position.Bottom} style={{ background: '#00e5ff', border: 'none', width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: '#087582', border: 'none', width: 8, height: 8 }} />
       <div className="text-[9px] font-mono text-cyan tracking-[0.2em] uppercase mb-1">Scenario</div>
       <div className="text-xs text-text-primary font-body leading-snug">{data.label}</div>
     </div>
@@ -52,8 +52,8 @@ function BranchNode({ data }: {
 
   return (
     <div className={clsx('px-3 py-2.5 bg-panel border rounded max-w-[200px] transition-all', borderClass)}>
-      <Handle type="target" position={Position.Top} style={{ background: '#00e5ff', border: 'none', width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: '#00e5ff', border: 'none', width: 8, height: 8 }} />
+      <Handle type="target" position={Position.Top} style={{ background: '#087582', border: 'none', width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: '#087582', border: 'none', width: 8, height: 8 }} />
       <div className="flex items-center gap-2 mb-1.5">
         <div className="w-5 h-5 rounded bg-cyan/10 border border-cyan/20 flex items-center justify-center text-[10px] font-mono text-cyan font-bold">
           {data.letter}
@@ -96,7 +96,7 @@ function OutcomeNode({ data }: {
 
   return (
     <div className={clsx('px-4 py-3 border rounded max-w-[220px]', styles[data.type])}>
-      <Handle type="target" position={Position.Top} style={{ background: '#1a2535', border: 'none', width: 8, height: 8 }} />
+      <Handle type="target" position={Position.Top} style={{ background: '#71869a', border: 'none', width: 8, height: 8 }} />
       <div className={clsx('text-[9px] font-mono tracking-[0.2em] uppercase mb-1', textStyles[data.type])}>
         {labels[data.type]}
       </div>
@@ -168,8 +168,8 @@ function buildGraph(
       id: `e-scenario-${branchId}`,
       source: 'scenario',
       target: branchId,
-      markerEnd: { type: MarkerType.ArrowClosed, color: '#00e5ff', width: 16, height: 16 },
-      style: { stroke: '#00e5ff', strokeWidth: 1.5, opacity: 0.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#087582', width: 16, height: 16 },
+      style: { stroke: '#087582', strokeWidth: 1.5, opacity: 0.65 },
       animated: true,
     })
 
@@ -191,8 +191,8 @@ function buildGraph(
         id: `e-${branchId}-${outcomeId}`,
         source: branchId,
         target: outcomeId,
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#1a2535', width: 14, height: 14 },
-        style: { stroke: '#1a2535', strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#71869a', width: 14, height: 14 },
+        style: { stroke: '#71869a', strokeWidth: 1.5 },
       })
     }
   })
@@ -227,13 +227,13 @@ export default function DecisionTree({
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ animated: false }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1a2535" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#b8c7d4" />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(n) => {
-            if (n.type === 'scenario') return '#00e5ff'
-            if (n.type === 'outcome') return '#1a2535'
-            return '#0d1420'
+            if (n.type === 'scenario') return '#087582'
+            if (n.type === 'outcome') return '#bd3f54'
+            return '#c7d3df'
           }}
           maskColor="rgba(8,12,18,0.8)"
         />

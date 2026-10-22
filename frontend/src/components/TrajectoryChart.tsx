@@ -8,11 +8,11 @@ const DIMENSIONS = ['trust', 'rapport', 'tension', 'respect', 'power_balance'] a
 type Dim = (typeof DIMENSIONS)[number]
 
 const DIM_COLORS: Record<string, string> = {
-  trust: '#00e5a0',         // cyan-green
-  rapport: '#38bdf8',       // sky blue
-  tension: '#ff3b5c',       // red-alert
-  respect: '#f59e0b',       // amber
-  power_balance: '#a78bfa', // violet
+  trust: '#167a57',         // green
+  rapport: '#2585a5',       // blue
+  tension: '#bd3f54',       // red-alert
+  respect: '#a85e00',       // amber
+  power_balance: '#7659a8', // violet
 }
 
 const DIM_LABEL: Record<string, string> = {
@@ -156,13 +156,13 @@ function MiniChart({ dim, values, label, current, start, turningPointIndices }: 
             <g key={k}>
               <line
                 x1={PAD_LEFT} y1={y} x2={SVG_W - PAD_RIGHT} y2={y}
-                stroke="#27272a" strokeWidth={0.5} strokeDasharray="3,3"
+                stroke="#d7e1eb" strokeWidth={0.5} strokeDasharray="3,3"
               />
               <text
                 x={PAD_LEFT - 3} y={y + 3.5}
                 textAnchor="end"
                 fontSize={8}
-                fill="#71717a"
+                fill="#6f8192"
                 fontFamily="monospace"
               >
                 {v.toFixed(0)}
@@ -176,7 +176,7 @@ function MiniChart({ dim, values, label, current, start, turningPointIndices }: 
           <line
             x1={PAD_LEFT} y1={neutralY}
             x2={SVG_W - PAD_RIGHT} y2={neutralY}
-            stroke="#3f3f46" strokeWidth={0.8} strokeDasharray="4,2"
+            stroke="#aebdca" strokeWidth={0.8} strokeDasharray="4,2"
           />
         )}
 
@@ -184,7 +184,7 @@ function MiniChart({ dim, values, label, current, start, turningPointIndices }: 
         <rect
           x={PAD_LEFT} y={PAD_TOP}
           width={PLOT_W} height={PLOT_H}
-          fill="none" stroke="#27272a" strokeWidth={0.5}
+          fill="none" stroke="#d7e1eb" strokeWidth={0.5}
         />
 
         {/* ── Area fill under the line (subtle) ── */}
@@ -217,7 +217,7 @@ function MiniChart({ dim, values, label, current, start, turningPointIndices }: 
           <circle
             key={i}
             cx={x} cy={y} r={turningPointIndices.has(i) ? 3.5 : 2}
-            fill={turningPointIndices.has(i) ? color : '#09090b'}
+            fill={turningPointIndices.has(i) ? color : '#ffffff'}
             stroke={color}
             strokeWidth={turningPointIndices.has(i) ? 1 : 1.2}
             opacity={0.9}
@@ -231,7 +231,7 @@ function MiniChart({ dim, values, label, current, start, turningPointIndices }: 
             x={toX(i)} y={SVG_H - 4}
             textAnchor="middle"
             fontSize={8}
-            fill="#52525b"
+            fill="#6f8192"
             fontFamily="monospace"
           >
             {xl}

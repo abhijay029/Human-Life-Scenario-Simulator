@@ -15,17 +15,17 @@
 }
 
 html, body {
-  background: #080c12;
-  color: #e8f0fe;
+  background: #e7edf3;
+  color: #1c3042;
   font-family: var(--font-body), sans-serif;
   overflow-x: hidden;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #0d1420; }
-::-webkit-scrollbar-thumb { background: #1a2535; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #00e5ff44; }
+::-webkit-scrollbar-track { background: #dce4ec; }
+::-webkit-scrollbar-thumb { background: #a9b9c9; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #0c8794; }
 
 /* Scanline overlay */
 .scanlines::after {
@@ -36,8 +36,8 @@ html, body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    rgba(31, 72, 86, 0.018) 2px,
+    rgba(31, 72, 86, 0.018) 4px
   );
   pointer-events: none;
   z-index: 9999;
@@ -46,27 +46,28 @@ html, body {
 /* Grid background */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(12,115,128,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(12,115,128,0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 /* Glowing border */
 .glow-border {
-  border: 1px solid rgba(0,229,255,0.2);
-  box-shadow: 0 0 0 1px rgba(0,229,255,0.05) inset;
+  border: 1px solid rgba(12,135,148,0.28);
+  box-shadow: 0 0 0 1px rgba(12,135,148,0.06) inset;
 }
 
 .glow-border:focus-within {
-  border-color: rgba(0,229,255,0.5);
-  box-shadow: 0 0 20px rgba(0,229,255,0.15);
+  border-color: rgba(12,135,148,0.65);
+  box-shadow: 0 0 20px rgba(12,135,148,0.14);
 }
 
 /* Panel styles */
 .panel {
-  background: #0d1420;
-  border: 1px solid #1a2535;
+  background: #f7f9fb;
+  border: 1px solid #c7d3df;
   border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(34, 61, 82, 0.07);
 }
 
 /* Typing cursor */
@@ -77,7 +78,7 @@ html, body {
 .cursor-blink::after {
   content: '▋';
   animation: blink 1s step-end infinite;
-  color: #00e5ff;
+  color: #087f8f;
 }
 
 /* Terminal text reveal */
@@ -88,8 +89,8 @@ html, body {
 
 /* Neon pulse */
 @keyframes neonPulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(0,229,255,0.4); }
-  50% { box-shadow: 0 0 20px rgba(0,229,255,0.8), 0 0 40px rgba(0,229,255,0.3); }
+  0%, 100% { box-shadow: 0 0 5px rgba(8,117,130,0.25); }
+  50% { box-shadow: 0 0 16px rgba(8,117,130,0.45), 0 0 30px rgba(8,117,130,0.16); }
 }
 .neon-pulse {
   animation: neonPulse 2s ease-in-out infinite;
@@ -112,11 +113,43 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* React Flow dark theme overrides */
-.react-flow__background { background: #080c12 !important; }
-.react-flow__edge-path { stroke: #00e5ff !important; stroke-width: 2 !important; }
+/* React Flow light theme overrides */
+.react-flow__background { background: #edf2f6 !important; }
+.react-flow__edge-path { stroke: #087f8f !important; stroke-width: 2 !important; }
 .react-flow__edge-path-selector { stroke: transparent !important; stroke-width: 12 !important; }
-.react-flow__controls { background: #0d1420 !important; border: 1px solid #1a2535 !important; }
-.react-flow__controls-button { background: #0d1420 !important; border-color: #1a2535 !important; fill: #6b7fa3 !important; }
-.react-flow__controls-button:hover { background: #1a2535 !important; }
-.react-flow__minimap { background: #080c12 !important; border: 1px solid #1a2535 !important; }
+.react-flow__controls { background: #f7f9fb !important; border: 1px solid #c7d3df !important; box-shadow: 0 4px 12px rgba(34,61,82,.14); }
+.react-flow__controls-button { background: #f7f9fb !important; border-color: #c7d3df !important; fill: #52677d !important; }
+.react-flow__controls-button:hover { background: #e1eaf1 !important; }
+.react-flow__minimap { background: #edf2f6 !important; border: 1px solid #c7d3df !important; }
+
+/* A few legacy zinc/black utilities are used in the Observer and setup views.
+   Keep them readable after the global theme change. */
+.bg-zinc-950 { background-color: #f7f9fb !important; }
+.bg-zinc-900 { background-color: #e1e8ef !important; }
+.bg-zinc-900\/50 { background-color: #edf2f6 !important; }
+.bg-zinc-800 { background-color: #d4dee8 !important; }
+.border-zinc-800 { border-color: #c4d0dc !important; }
+.text-zinc-200 { color: #20384b !important; }
+.text-zinc-300 { color: #30495d !important; }
+.text-zinc-400 { color: #52677d !important; }
+.text-zinc-500 { color: #667b8e !important; }
+.text-zinc-600 { color: #74899b !important; }
+.text-zinc-700 { color: #8799a8 !important; }
+.text-green-400 { color: #16845d !important; }
+.text-red-400 { color: #c24156 !important; }
+.text-amber-400, .text-amber-500 { color: #a85e00 !important; }
+.text-cyan-400 { color: #087f8f !important; }
+.text-green-500 { color: #167a57 !important; }
+.text-red-500 { color: #bd3f54 !important; }
+.bg-green-500\/10 { background-color: rgba(22, 122, 87, .1) !important; }
+.bg-red-500\/10 { background-color: rgba(189, 63, 84, .1) !important; }
+.border-green-500\/20 { border-color: rgba(22, 122, 87, .25) !important; }
+.border-red-500\/20 { border-color: rgba(189, 63, 84, .25) !important; }
+.bg-green-400 { background-color: #16845d !important; }
+.bg-red-400 { background-color: #c24156 !important; }
+.bg-zinc-500 { background-color: #71869a !important; }
+.hover\:bg-zinc-800:hover { background-color: #d4dee8 !important; }
+.hover\:text-zinc-300:hover { color: #20384b !important; }
+.bg-black\/20 { background-color: rgba(199, 211, 223, .34) !important; }
+.bg-black\/30 { background-color: rgba(199, 211, 223, .46) !important; }
+.bg-black\/40 { background-color: rgba(199, 211, 223, .58) !important; }

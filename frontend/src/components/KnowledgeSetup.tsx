@@ -338,7 +338,7 @@ export default function KnowledgeSetup({
 
       {/* What the topics below are based on */}
       <div className="mb-4 p-3 bg-black/20 rounded-lg border border-border/50 text-xs">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="space-y-1.5 min-w-0">
             <p className="text-[10px] font-mono text-text-dim">Topics are based on this scenario</p>
             <p className="text-text-primary">{scenarioDescription}</p>
@@ -574,12 +574,12 @@ export default function KnowledgeSetup({
 
       {/* Final step: run settings and launch */}
       <div className="mt-6 pt-5 border-t border-border space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-xs font-mono text-text-secondary">Max Dialogue Turns</p>
             <p className="text-[10px] text-text-dim">Fewer turns = faster results (2–20 recommended)</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <button
               onClick={() => onMaxTurnsChange(Math.max(2, maxTurns - 1))}
               className="w-7 h-7 panel flex items-center justify-center text-text-secondary hover:text-cyan transition-colors font-mono"
@@ -598,12 +598,12 @@ export default function KnowledgeSetup({
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Button variant="ghost" onClick={onBack} disabled={loading || running}>
             ← Back
           </Button>
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => onRun()} disabled={loading || running || generating || researching}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <Button variant="secondary" onClick={() => onRun()} disabled={loading || running || generating || researching} className="justify-center">
               Skip profiles &amp; run
             </Button>
             <Button
@@ -611,7 +611,7 @@ export default function KnowledgeSetup({
               onClick={handleConfirm}
               disabled={generating || researching || running}
               loading={loading}
-              className="px-8"
+              className="px-8 justify-center"
             >
               {loading ? 'Compiling…' : `Confirm & run ${mode === 'multiverse' ? 'multiverse' : 'simulation'} →`}
             </Button>
