@@ -28,8 +28,10 @@ class Observation(BaseModel):
     relationship_trajectory: Literal["improving", "stable", "deteriorating"] = Field(description="The current status and direction of the relationship between the speakers. This value can be 'improving', 'stable', or 'deteriorating'")
     trajectory_explanation: str = Field(description="Explanation for the predicted relationship trajectory in one line.")
     persona_goal_success: list[PersonaGoalSuccess]
-    outcome_category: Literal["Best Case", "Most Likely", "Worst Case"] = Field(
-        description="The category of the outcome: 'Best Case', 'Most Likely', or 'Worst Case'."
+    outcome_category: Literal["In favor", "disfavor"] = Field(
+        description="The category of the branch. It can have the following values: "
+        "'In favor': Means the outcome is in favor of the user. "
+        "'disfavor': Means the outcome is not in favor of the user."
     )
     outcome_summary: str = Field(description="Summary of the outcome of this branch in maximum of 2 sentences.")
     key_turning_points: list[str] = Field(

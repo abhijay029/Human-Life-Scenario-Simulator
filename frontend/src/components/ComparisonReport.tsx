@@ -107,11 +107,9 @@ export default function ComparisonReportPanel({ report }: { report: ComparisonRe
                         <span
                           className={clsx(
                             'text-[10px] px-1.5 py-0.5 rounded border',
-                            b.outcome_category === 'Best Case' &&
+                            b.outcome_category === 'In favor' &&
                               'text-green-good border-green-good/30 bg-green-good/10',
-                            b.outcome_category === 'Most Likely' &&
-                              'text-amber-sim border-amber-sim/30 bg-amber-sim/10',
-                            b.outcome_category === 'Worst Case' &&
+                            b.outcome_category === 'disfavor' &&
                               'text-red-alert border-red-alert/30 bg-red-alert/10'
                           )}
                         >

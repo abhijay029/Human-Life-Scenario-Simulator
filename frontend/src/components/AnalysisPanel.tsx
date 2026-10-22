@@ -11,9 +11,8 @@ function TrajectoryIcon({ t }: { t: string }) {
 }
 
 function outcomeVariant(cat: string): 'success' | 'warning' | 'danger' | 'default' {
-  if (cat === 'Best Case') return 'success'
-  if (cat === 'Most Likely') return 'warning'
-  if (cat === 'Worst Case') return 'danger'
+  if (cat === 'In favor') return 'success'
+  if (cat === 'disfavor') return 'danger'
   return 'default'
 }
 

@@ -12,7 +12,6 @@ Facts across all knowledge levels are returned to the user for review; at chat t
 """
 from __future__ import annotations
 
-import datetime
 import hashlib
 import logging
 import pathlib
@@ -26,6 +25,7 @@ from pydantic import BaseModel
 from ..config import settings
 from ..llm_client import LLMClient
 from ..schemas.models import BriefFact, BriefSource, Level, Topic, TopicBrief
+from .search_provider import SearchProvider, build_search_provider
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +77,13 @@ def _clean_facts(raw: list[_RawFact]) -> list[BriefFact]:
 class BriefGenerator:
     """Researches and caches expert briefs for topics."""
 
-    def __init__(self, llm_client: LLMClient) -> None:
+    def __init__(
+        self,
+        llm_client: LLMClient,
+        search_provider: SearchProvider | None = None,
+    ) -> None:
         self._llm = llm_client
+        self._search_provider = search_provider if search_provider is not None else build_search_provider()
         self._jinja_env = Environment(
             loader=FileSystemLoader(str(_PROMPTS_DIR)),
             autoescape=select_autoescape(enabled_extensions=()),
@@ -120,43 +125,40 @@ class BriefGenerator:
     # --------------------------------------------------------------- research
 
     def _research_topic(self, topic: Topic) -> TopicBrief:
-        research_prompt = self._jinja_env.get_template("brief_research.jinja2").render(
-            name=topic.name,
-            domain=topic.domain,
-            concepts=[c.term for c in topic.concepts],
-            today=datetime.date.today().isoformat(),
-        )
-        grounded = self._llm.complete_grounded(
-            [{"role": "user", "content": research_prompt}], model=settings.MAIN_MODEL
-        )
-        if not grounded.grounded or not grounded.sources:
-            raise ValueError("Web search returned no verifiable sources; no facts were added")
+        if self._search_provider is None:
+            raise ValueError(
+                "No search provider configured; set SEARCH_PROVIDER=tavily and TAVILY_API_KEY"
+            )
 
-        # Most grounded responses follow the requested JSON schema, avoiding
-        # a second model call for extraction. Keep the old extraction path as a
-        # recovery step for responses wrapped in unexpected prose or markup.
-        raw_text = grounded.text.strip()
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        try:
-            extracted = _RawBriefOutput.model_validate_json(raw_text)
-        except Exception:
-            extract_prompt = self._jinja_env.get_template("brief_extract.jinja2").render(
-                name=topic.name, domain=topic.domain, notes=grounded.text
-            )
-            extracted = self._llm.complete_structured(
-                [{"role": "user", "content": extract_prompt}],
-                output_schema=_RawBriefOutput,
-                model=settings.FAST_MODEL,
-            )
+        concepts = [c.term for c in topic.concepts]
+        query = " ".join([topic.name, topic.domain, *concepts]).strip()
+        search_results = self._search_provider.search(
+            query,
+            max_results=settings.SEARCH_MAX_RESULTS,
+        )
+        if not search_results:
+            raise ValueError("Search returned no usable sources; no facts were added")
+
+        notes = "\n\n".join(
+            f"SOURCE: {result.title}\nURL: {result.url}\n{result.content}"
+            for result in search_results
+        )
+        extract_prompt = self._jinja_env.get_template("brief_extract.jinja2").render(
+            name=topic.name, domain=topic.domain, notes=notes
+        )
+        extracted = self._llm.complete_structured(
+            [{"role": "user", "content": extract_prompt}],
+            output_schema=_RawBriefOutput,
+            model=settings.FAST_MODEL,
+        )
         facts = _clean_facts(extracted.facts)
         if not facts:
             raise ValueError("No usable facts were extracted")
 
         return TopicBrief(
             facts=facts,
-            sources=[BriefSource(**s) for s in grounded.sources],
-            grounded=grounded.grounded,
+            sources=[BriefSource(title=result.title, url=result.url) for result in search_results],
+            grounded=True,
         )
 
     # -------------------------------------------------------------- public API

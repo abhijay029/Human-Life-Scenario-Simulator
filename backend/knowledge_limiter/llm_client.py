@@ -1,90 +1,39 @@
-"""LLM client wrapper for the Knowledge Limiter and Observer modules.
-
-Supports dual-tier execution:
-1. Google Gemini via langchain-google-genai with multi-key rotation on 429 quota exhaustion.
-2. Local Ollama fallback via langchain-ollama (model: settings.ENGINE_MODEL / qwen2.5:3b)
-   providing zero-rate-limit, zero-cost structured & text completions.
-
-langchain packages are imported lazily so that modules can be imported even when
-packages are not installed in the current environment (e.g. during offline mocking).
-"""
+"""Shared Ollama LLM client for the Knowledge Limiter and Observer modules."""
 
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel
 
-from .config import settings, get_gemini_keys
-
-if TYPE_CHECKING:
-    from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.core.llm import get_evaluator
 
 logger = logging.getLogger(__name__)
 
-
-def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
-    """Return True if exception indicates quota, rate limit (429), or auth exhaustion."""
-    err_str = str(exc).lower()
-    return any(
-        kw in err_str
-        for kw in (
-            "429",
-            "resource_exhausted",
-            "quota",
-            "rate limit",
-            "ratelimit",
-            "exceeded",
-            "403",
-            "api_key_invalid",
-            "invalid_argument",
-        )
-    )
+_ollama_llm = get_evaluator()
 
 
-def _build_gemini_llm(
-    model: str,
-    api_key: str | None = None,
-    temperature: float = 0.2,
-) -> "ChatGoogleGenerativeAI":
-    """Instantiate a ChatGoogleGenerativeAI with the given model and API key."""
-    try:
-        from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "langchain-google-genai is required for Gemini calls. "
-            "Install it with: pip install langchain-google-genai"
-        ) from exc
+def _messages_to_lc(messages: list[dict[str, str]]) -> list[Any]:
+    """Convert role/content dictionaries into LangChain message objects."""
+    from langchain_core.messages import HumanMessage, SystemMessage
 
-    effective_key = api_key or settings.GEMINI_API_KEY or None
-    return ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=effective_key,
-        temperature=temperature,
-        max_retries=0,
-    )
+    result: list[Any] = []
+    for message in messages:
+        if message.get("role", "user") == "system":
+            result.append(SystemMessage(content=message.get("content", "")))
+        else:
+            result.append(HumanMessage(content=message.get("content", "")))
+    return result
 
 
 def _complete_via_ollama(
     messages: list[dict[str, str]],
     temperature: float = 0.2,
 ) -> str:
-    """Fallback plain-text completion using local Ollama."""
-    try:
-        from langchain_ollama import ChatOllama  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "langchain-ollama is required for Ollama fallback in LLMClient."
-        ) from exc
-
-    logger.info("Executing completion via local Ollama (%s)", settings.ENGINE_MODEL)
-    ollama_llm = ChatOllama(
-        model=settings.ENGINE_MODEL,
-        temperature=temperature,
-    )
-    lc_msgs = _messages_to_lc(messages)
-    response = ollama_llm.invoke(lc_msgs)
+    """Complete a prompt using the shared Ollama evaluator instance."""
+    logger.info("Executing completion via shared Ollama evaluator")
+    response = _ollama_llm.invoke(_messages_to_lc(messages))
     return str(response.content)
 
 
@@ -93,97 +42,22 @@ def _complete_structured_via_ollama(
     output_schema: type[BaseModel],
     temperature: float = 0.0,
 ) -> BaseModel:
-    """Fallback structured completion using local Ollama."""
-    try:
-        from langchain_ollama import ChatOllama  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "langchain-ollama is required for Ollama fallback in LLMClient."
-        ) from exc
-
-    logger.info("Executing structured completion via local Ollama (%s)", settings.ENGINE_MODEL)
-    ollama_llm = ChatOllama(
-        model=settings.ENGINE_MODEL,
-        temperature=temperature,
-    )
-    structured_llm = ollama_llm.with_structured_output(output_schema)
-    lc_msgs = _messages_to_lc(messages)
-    return structured_llm.invoke(lc_msgs)
-
-
-def _content_to_text(content: Any) -> str:
-    """Flatten a LangChain message ``content`` (str or list of parts) into plain text."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for part in content:
-            if isinstance(part, str):
-                parts.append(part)
-            elif isinstance(part, dict) and isinstance(part.get("text"), str):
-                parts.append(part["text"])
-        return "".join(parts)
-    return str(content)
-
-
-def _extract_grounding_sources(response: Any) -> list[dict[str, str]]:
-    """Pull de-duplicated web sources out of Gemini grounding metadata (snake or camel case)."""
-    meta = getattr(response, "response_metadata", None) or {}
-    grounding = meta.get("grounding_metadata") or meta.get("groundingMetadata") or {}
-    if not isinstance(grounding, dict):
-        return []
-    chunks = grounding.get("grounding_chunks") or grounding.get("groundingChunks") or []
-    sources: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for chunk in chunks:
-        web = (chunk or {}).get("web") or {}
-        url = web.get("uri") or web.get("url")
-        if not url or url in seen:
-            continue
-        seen.add(url)
-        sources.append({"title": web.get("title") or "", "url": url})
-    return sources
+    """Complete a structured prompt using the shared Ollama evaluator instance."""
+    logger.info("Executing structured completion via shared Ollama evaluator")
+    structured_llm = _ollama_llm.with_structured_output(output_schema)
+    return structured_llm.invoke(_messages_to_lc(messages))
 
 
 class GroundedResult(BaseModel):
-    """Text from a search-grounded completion plus the sources that backed it."""
+    """Completion result with optional supporting sources."""
 
     text: str
     sources: list[dict[str, str]] = []
-    grounded: bool = False  # True only if Gemini returned web sources for this answer
-
-
-def _messages_to_lc(messages: list[dict[str, str]]) -> list[Any]:
-    """Convert a list of ``{"role": ..., "content": ...}`` dicts to LangChain message objects."""
-    try:
-        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "langchain-core is required for LLMClient."
-        ) from exc
-
-    lc_messages: list[Any] = []
-    for msg in messages:
-        role = msg.get("role", "user")
-        content = msg.get("content", "")
-        if role == "system":
-            lc_messages.append(SystemMessage(content=content))
-        else:
-            lc_messages.append(HumanMessage(content=content))
-    return lc_messages
+    grounded: bool = False
 
 
 class LLMClient:
-    """Robust, provider-agnostic wrapper for LLM calls with multi-key rotation and Ollama fallback.
-
-    First attempts Google Gemini using any available configured API keys.
-    If 429 quota exhaustion occurs, it rotates through the key pool.
-    If all keys are exhausted (or none configured), it transparently falls back
-    to local Ollama (qwen2.5:3b), ensuring zero degraded mock fallbacks.
-    """
-
-    def __init__(self) -> None:
-        self._key_index: int = 0
+    """Provider-neutral interface backed exclusively by the shared Ollama model."""
 
     def complete(
         self,
@@ -191,41 +65,10 @@ class LLMClient:
         model: str | None = None,
         temperature: float | None = None,
     ) -> str:
-        """Send *messages* to the LLM and return the plain-text response string."""
-        effective_model = model or settings.FAST_MODEL
-        eff_temp = 0.2 if temperature is None else temperature
-        keys = get_gemini_keys()
-
-        if keys:
-            num_keys = len(keys)
-            for attempt in range(num_keys):
-                idx = (self._key_index + attempt) % num_keys
-                key = keys[idx]
-                try:
-                    llm = _build_gemini_llm(effective_model, api_key=key, temperature=eff_temp)
-                    lc_msgs = _messages_to_lc(messages)
-                    response = llm.invoke(lc_msgs)
-                    self._key_index = idx  # Remember working key
-                    return str(response.content)
-                except Exception as exc:
-                    if _is_quota_or_rate_limit_error(exc) and attempt < num_keys - 1:
-                        logger.warning(
-                            "Gemini key [%d/%d] exhausted or rate-limited (%s). Rotating to next key...",
-                            idx + 1,
-                            num_keys,
-                            exc,
-                        )
-                        continue
-                    logger.warning(
-                        "Gemini call failed with key [%d/%d] (%s). Falling back to local Ollama...",
-                        idx + 1,
-                        num_keys,
-                        exc,
-                    )
-                    break
-
-        # Fallback to local Ollama
-        return _complete_via_ollama(messages, temperature=eff_temp)
+        return _complete_via_ollama(
+            messages,
+            temperature=0.2 if temperature is None else temperature,
+        )
 
     def complete_structured(
         self,
@@ -234,42 +77,11 @@ class LLMClient:
         model: str | None = None,
         temperature: float | None = None,
     ) -> BaseModel:
-        """Send *messages* and return a validated Pydantic model instance."""
-        effective_model = model or settings.FAST_MODEL
-        eff_temp = 0.0 if temperature is None else temperature
-        keys = get_gemini_keys()
-
-        if keys:
-            num_keys = len(keys)
-            for attempt in range(num_keys):
-                idx = (self._key_index + attempt) % num_keys
-                key = keys[idx]
-                try:
-                    llm = _build_gemini_llm(effective_model, api_key=key, temperature=eff_temp)
-                    structured_llm = llm.with_structured_output(output_schema)
-                    lc_msgs = _messages_to_lc(messages)
-                    result = structured_llm.invoke(lc_msgs)
-                    self._key_index = idx  # Remember working key
-                    return result  # type: ignore[return-value]
-                except Exception as exc:
-                    if _is_quota_or_rate_limit_error(exc) and attempt < num_keys - 1:
-                        logger.warning(
-                            "Gemini key [%d/%d] exhausted or rate-limited (%s). Rotating to next key...",
-                            idx + 1,
-                            num_keys,
-                            exc,
-                        )
-                        continue
-                    logger.warning(
-                        "Gemini structured call failed with key [%d/%d] (%s). Falling back to local Ollama...",
-                        idx + 1,
-                        num_keys,
-                        exc,
-                    )
-                    break
-
-        # Fallback to local Ollama
-        return _complete_structured_via_ollama(messages, output_schema, temperature=eff_temp)
+        return _complete_structured_via_ollama(
+            messages,
+            output_schema,
+            temperature=0.0 if temperature is None else temperature,
+        )
 
     def complete_grounded(
         self,
@@ -277,41 +89,7 @@ class LLMClient:
         model: str | None = None,
         temperature: float | None = None,
     ) -> GroundedResult:
-        """Completion with Gemini's Google Search tool enabled.
-
-        Returns the text plus the web sources it was grounded on. If grounding is
-        unavailable (no keys, tool unsupported, call failed) it falls back to a plain
-        completion and reports ``grounded=False`` — callers must not present such
-        output as web-verified.
-        """
-        effective_model = model or settings.MAIN_MODEL
-        eff_temp = 0.2 if temperature is None else temperature
-        keys = get_gemini_keys()
-
-        if keys:
-            num_keys = len(keys)
-            for attempt in range(num_keys):
-                idx = (self._key_index + attempt) % num_keys
-                try:
-                    llm = _build_gemini_llm(effective_model, api_key=keys[idx], temperature=eff_temp)
-                    searching_llm = llm.bind_tools([{"google_search": {}}])
-                    response = searching_llm.invoke(_messages_to_lc(messages))
-                    self._key_index = idx
-                    text = _content_to_text(response.content).strip()
-                    if not text:
-                        raise ValueError("Grounded completion returned no text")
-                    sources = _extract_grounding_sources(response)
-                    return GroundedResult(text=text, sources=sources, grounded=bool(sources))
-                except Exception as exc:
-                    if _is_quota_or_rate_limit_error(exc) and attempt < num_keys - 1:
-                        logger.warning(
-                            "Gemini key [%d/%d] exhausted during grounded call (%s). Rotating...",
-                            idx + 1, num_keys, exc,
-                        )
-                        continue
-                    logger.warning("Grounded Gemini call failed (%s). Falling back to ungrounded.", exc)
-                    break
-
+        """Complete locally; Ollama does not provide web-grounding metadata."""
         return GroundedResult(
             text=self.complete(messages, model=model, temperature=temperature),
             sources=[],

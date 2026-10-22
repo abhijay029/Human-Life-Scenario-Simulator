@@ -64,7 +64,7 @@ class ObserverAnalysis(BaseModel):
     relationship_trajectory: str
     trajectory_explanation: str
     persona_goal_success: list[PersonaGoalSuccess]
-    outcome_category: Literal["Best Case", "Most Likely", "Worst Case"] = "Most Likely"
+    outcome_category: Literal["In favor", "disfavor"] = "In favor"
     outcome_summary: str
     key_turning_points: list[str]
     recommendations: list[str]

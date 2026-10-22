@@ -1,11 +1,11 @@
 'use client'
 import { useState } from 'react'
 import type { ObserverSSEState, ConversationScorecard } from '@/lib/types'
-import { Panel, Badge, ProgressBar } from './ui'
+import { Panel, ProgressBar } from './ui'
 import TrajectoryChart from './TrajectoryChart'
 import {
   Activity, TrendingUp, TrendingDown, Minus,
-  AlertTriangle, Lightbulb, Target, Wifi, WifiOff,
+  AlertTriangle, Lightbulb, Wifi, WifiOff,
   ChevronDown, ChevronRight,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -30,19 +30,6 @@ function TrajectoryLabel({ label }: { label: string }) {
   return <Minus size={12} className="text-zinc-500" />
 }
 
-function outcomeVariant(cat: string): 'success' | 'warning' | 'danger' | 'default' {
-  if (cat === 'Best Case') return 'success'
-  if (cat === 'Worst Case') return 'danger'
-  if (cat === 'Most Likely') return 'warning'
-  return 'default'
-}
-
-function probColor(p: number) {
-  if (p >= 0.65) return 'text-green-400'
-  if (p >= 0.35) return 'text-amber-400'
-  return 'text-red-400'
-}
-
 // ── Scorecard ──────────────────────────────────────────────────────────────
 
 const METRIC_LABELS: Record<string, string> = {
@@ -64,13 +51,9 @@ function ScorecardView({ sc }: { sc: ConversationScorecard }) {
 
   return (
     <div className="space-y-4">
-      {/* Outcome */}
-      <div className="flex items-center gap-3">
-        <Badge variant={outcomeVariant(sc.outcome_category)}>{sc.outcome_category}</Badge>
-        {sc.summary && (
-          <p className="text-xs text-zinc-400 font-body italic flex-1">{sc.summary}</p>
-        )}
-      </div>
+      {sc.summary && (
+        <p className="text-xs text-zinc-400 font-body italic">{sc.summary}</p>
+      )}
 
       {/* Realism metrics */}
       <div className="space-y-2.5">
@@ -91,22 +74,6 @@ function ScorecardView({ sc }: { sc: ConversationScorecard }) {
           </div>
         ))}
       </div>
-
-      {/* Goal success */}
-      {Object.keys(sc.goal_success).length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-mono text-zinc-500 tracking-wider uppercase">Goal Success</p>
-          {Object.entries(sc.goal_success).map(([name, prob]) => (
-            <div key={name} className="flex items-center gap-3">
-              <Target size={11} className="text-zinc-500 flex-shrink-0" />
-              <span className="text-xs font-mono text-zinc-300 truncate flex-1">{name}</span>
-              <span className={clsx('text-xs font-mono font-bold', probColor(prob))}>
-                {Math.round(prob * 100)}%
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Turning points */}
       {sc.key_turning_points.length > 0 && (
@@ -196,11 +163,6 @@ export default function ObserverPanel({ observer }: { observer: ObserverSSEState
           <span className="text-[10px] font-mono text-zinc-600">
             {observations.length} turn{observations.length !== 1 ? 's' : ''} observed
           </span>
-          {finalized && scorecard && (
-            <Badge variant={outcomeVariant(scorecard.outcome_category)}>
-              {scorecard.outcome_category}
-            </Badge>
-          )}
         </div>
       </div>
 

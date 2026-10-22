@@ -32,7 +32,7 @@ export interface ObserverAnalysis {
   relationship_trajectory: 'improving' | 'stable' | 'deteriorating'
   trajectory_explanation: string
   persona_goal_success: PersonaGoalSuccess[]
-  outcome_category: 'Best Case' | 'Most Likely' | 'Worst Case'
+  outcome_category: 'In favor' | 'disfavor'
   outcome_summary: string
   key_turning_points: string[]
   recommendations: string[]
@@ -55,7 +55,7 @@ export interface SimulationResponse {
 // ── Multiverse ─────────────────────────────────────────────────────────────
 export interface BranchSummary {
   decision_point: string
-  outcome_category?: string
+  outcome_category?: 'In favor' | 'disfavor'
   avg_success_probability: number
 }
 

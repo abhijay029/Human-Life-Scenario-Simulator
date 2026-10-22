@@ -4,7 +4,6 @@ API Routes
 All FastAPI route handlers.
 """
 
-import os
 import json
 import asyncio
 import threading
@@ -13,12 +12,11 @@ from queue import Empty, Queue
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from backend.agents.persona import Persona
 from backend.agents.observer import analyse_dialogue
+from backend.core import llm
 from backend.memory.memory_manager import PersonaMemory
 from backend.simulation.engine import run_simulation
 from backend.simulation.multiverse import run_multiverse, generate_comparison_report
@@ -32,8 +30,6 @@ from backend.api.schemas import (
     PersonaSchema,
 )
 
-load_dotenv()
-
 router = APIRouter()
 
 # Thread pool for running blocking simulation code without blocking the event loop
@@ -42,10 +38,7 @@ _executor = ThreadPoolExecutor(max_workers=1)
 # Only one simulation at a time
 _sim_lock = threading.Lock()
 
-_llm = ChatGoogleGenerativeAI(
-    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-    google_api_key=os.getenv("GEMINI_API_KEY"),
-)
+_llm = llm.get_evaluator()
 
 
 def _sse(event: dict) -> str:
@@ -106,7 +99,6 @@ async def simulate(req: RunSimulationRequest):
                 scenario=req.scenario,
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
-                session_id=session_id,
             )
 
             try:
@@ -245,7 +237,6 @@ async def simulate_stream(req: RunSimulationRequest):
                 decision_point=req.decision_point,
                 max_turns=req.max_turns,
                 on_event=on_turn,
-                session_id=session_id,
             )
 
             events.put({"type": "status", "message": "Observer analysing outcomes"})

@@ -67,8 +67,7 @@ function SingleResult({
         <div className="flex items-center gap-2">
           {result.analysis && (
             <Badge variant={
-              result.analysis.outcome_category === 'Best Case' ? 'success' :
-              result.analysis.outcome_category === 'Worst Case' ? 'danger' : 'warning'
+              result.analysis.outcome_category === 'In favor' ? 'success' : 'danger'
             }>
               {result.analysis.outcome_category}
             </Badge>
@@ -213,8 +212,7 @@ function MultiverseResult({
                 <span className="max-w-[180px] truncate">{b.decision_point}</span>
                 {b.analysis?.outcome_category && (
                   <Badge variant={
-                    b.analysis.outcome_category === 'Best Case' ? 'success' :
-                    b.analysis.outcome_category === 'Worst Case' ? 'danger' : 'warning'
+                    b.analysis.outcome_category === 'In favor' ? 'success' : 'danger'
                   }>
                     {b.analysis.outcome_category}
                   </Badge>
